@@ -1,0 +1,42 @@
+# Build artifacts
+.build/
+build/
+DerivedData/
+*.app
+*.dSYM
+
+# Rust build
+RustFTP/target/
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Xcode
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.resolved
+
+# IDE
+.idea/
+*.xcworkspace/
+
+# Credentials and secrets
+*.env
+credentials.json
+*.p12
+*.mobileprovision
+
+# Logs
+*.log
+
+# Archives and distribution
+*.zip
+*.dmg
+*.pkg
