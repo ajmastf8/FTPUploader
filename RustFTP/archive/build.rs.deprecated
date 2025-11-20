@@ -1,0 +1,84 @@
+// Cargo build script to embed Info.plist into the Rust binary for macOS App Store compliance
+// This allows the binary to have app-sandbox entitlement without being a full .app bundle
+
+use std::env;
+use std::path::Path;
+use std::process::Command;
+
+fn main() {
+    // Only run on macOS
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
+    if target_os != "macos" {
+        return;
+    }
+
+    println!("cargo:rerun-if-changed=Info.plist");
+
+    // Get the output directory
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    
+    // Path to the Info.plist
+    let plist_path = Path::new(&manifest_dir).join("Info.plist");
+    
+    if !plist_path.exists() {
+        println!("cargo:warning=Info.plist not found at {:?}", plist_path);
+        return;
+    }
+
+    // Convert Info.plist to binary format for embedding
+    let binary_plist = Path::new(&out_dir).join("Info.plist");
+    let status = Command::new("plutil")
+        .args(&["-convert", "binary1", "-o"])
+        .arg(&binary_plist)
+        .arg(&plist_path)
+        .status()
+        .expect("Failed to convert Info.plist to binary format");
+
+    if !status.success() {
+        println!("cargo:warning=Failed to convert Info.plist to binary format");
+        return;
+    }
+
+    // Create an empty object file first
+    let empty_source = Path::new(&out_dir).join("empty.c");
+    std::fs::write(&empty_source, "").expect("Failed to create empty source file");
+
+    let empty_obj = Path::new(&out_dir).join("empty.o");
+    let status = Command::new("clang")
+        .args(&["-c", "-o"])
+        .arg(&empty_obj)
+        .arg(&empty_source)
+        .status()
+        .expect("Failed to compile empty object file");
+
+    if !status.success() {
+        println!("cargo:warning=Failed to create empty object file");
+        return;
+    }
+
+    // Create a linkable section file that embeds the plist
+    let section_file = Path::new(&out_dir).join("infoplist.o");
+
+    // Use ld to create an object file with the plist in the __TEXT,__info_plist section
+    // The syntax is: ld -r -sectcreate SEGMENT SECTION FILE input.o -o output.o
+    let status = Command::new("ld")
+        .args(&["-r"])
+        .args(&["-sectcreate", "__TEXT", "__info_plist"])
+        .arg(&binary_plist)
+        .arg(&empty_obj)
+        .arg("-o")
+        .arg(&section_file)
+        .status()
+        .expect("Failed to create Info.plist section");
+
+    if status.success() {
+        // Tell cargo to link this object file into the binary
+        // Use rustc-link-arg-bins to ensure it's linked into the binary (not just libraries)
+        println!("cargo:rustc-link-arg-bins={}", section_file.display());
+        println!("cargo:warning=Successfully embedded Info.plist into binary");
+        println!("cargo:warning=Link arg: {}", section_file.display());
+    } else {
+        println!("cargo:warning=Failed to create Info.plist section object file");
+    }
+}

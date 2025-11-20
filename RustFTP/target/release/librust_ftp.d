@@ -1,0 +1,1 @@
+/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/target/release/librust_ftp.a: /Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/src/db.rs /Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/src/ftp_engine.rs /Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/src/lib.rs

@@ -1,0 +1,15 @@
+{
+  "server_address": "localhost",
+  "port": 21,
+  "username": "test",
+  "password": "test",
+  "remote_directories": ["/test"],
+  "local_download_path": "/tmp",
+  "respect_file_paths": false,
+  "download_mode": "delete",
+  "sync_interval": 5.0,
+  "stabilization_interval": 1,
+  "config_id": 1,
+  "config_name": "test-loop",
+  "session_id": "test-loop-session"
+}

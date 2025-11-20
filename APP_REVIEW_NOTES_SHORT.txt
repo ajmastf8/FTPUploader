@@ -1,0 +1,94 @@
+APP REVIEW NOTES - FTP Downloader
+
+TESTING WITH DEMO MODE (No FTP Server Required)
+════════════════════════════════════════════════
+
+FTP Downloader includes built-in demo mode for easy testing.
+
+QUICK TEST (6 Steps):
+
+1. LAUNCH APP - Demo Configuration tab appears automatically
+
+2. VIEW DEMO CONFIG - Click ⚙️ (gear icon)
+   • LOOK FOR: Orange banner "Demo Mode - cannot be edited"
+   • All fields disabled (grayed out) - intentional design
+   • Shows: demo.example.com, demo_user, port 21
+
+3. TEST CONNECTION - Click "Test Connection" button
+   • Result: ✅ "Demo connection successful! (Simulated)"
+
+4. START SESSION - Click "Start" button
+   • Status: "Not Connected" → "Connecting" → "Connected"
+   • Watch metrics update: file counts, files/min, MB/s
+   • Notification feed shows simulated downloads
+
+5. VIEW LOGS - Click "Live Logs" button
+   • Separate window with color-coded operation logs
+
+6. STOP SESSION - Click "Stop" button
+   • Returns to "Not Connected" instantly (no freeze)
+
+WHAT TO VERIFY:
+✅ Orange demo banner visible in config view
+✅ All demo fields disabled (read-only)
+✅ Real-time metrics during session
+✅ Notifications appear with timestamps
+✅ Stop button responds instantly
+✅ "Save Changes" disabled in demo config
+
+════════════════════════════════════════════════
+
+OPTIONAL: TEST REAL FTP
+
+If you have FTP server access:
+1. Click "New Configuration"
+2. Enter server/credentials
+3. Click "Test Connection" (verifies real connection)
+4. Select local download folder (grants file permissions)
+5. Click "Browse FTP" to pick remote directories
+6. Click "Create Configuration" and "Start"
+
+════════════════════════════════════════════════
+
+PRIVACY & PERMISSIONS
+
+Required Permissions:
+• Network - FTP connections
+• File System - Download folder (user grants)
+• Keychain - Secure password storage
+
+Privacy Commitment:
+✅ NO data collection, analytics, or telemetry
+✅ ALL data stored locally only
+✅ Direct FTP connections (no proxy/relay)
+✅ NO third-party sharing
+
+════════════════════════════════════════════════
+
+KNOWN BEHAVIORS (Not Bugs)
+
+• Demo config READ-ONLY by design (prevents confusion)
+• Demo not saved to disk (recreated each session)
+• Stop button instant (fixed previous deadlock issue)
+• Metrics exclude idle time (active download time only)
+• Simulated data appears perfect (real has variance)
+
+════════════════════════════════════════════════
+
+TECHNICAL NOTES
+
+Architecture: Hybrid Swift/Rust
+• Swift - Native macOS UI (SwiftUI)
+• Rust - High-performance FTP engine (embedded static library)
+• FFI bridge for seamless communication
+
+Requirements:
+• macOS 13.0+ (Ventura or later)
+• Apple Silicon (M1/M2/M3)
+• 50 MB disk space
+
+════════════════════════════════════════════════
+
+Questions during review? Contact: [your email]
+
+Thank you for reviewing FTP Downloader!

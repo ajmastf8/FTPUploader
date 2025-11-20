@@ -1,0 +1,4 @@
+cargo:rerun-if-changed=Info.plist
+cargo:rustc-link-arg-bins=/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/target/debug/build/rust_ftp-b203611e075bc13a/out/infoplist.o
+cargo:warning=Successfully embedded Info.plist into binary
+cargo:warning=Link arg: /Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/target/debug/build/rust_ftp-b203611e075bc13a/out/infoplist.o

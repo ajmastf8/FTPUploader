@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Store Distribution -->
+    <key>method</key>
+    <string>app-store</string>
+
+    <!-- Your Team ID from Apple Developer Account -->
+    <key>teamID</key>
+    <string>6X7BH7FLQ8</string>
+
+    <!-- Signing Configuration -->
+    <key>signingStyle</key>
+    <string>automatic</string>
+
+    <!-- Upload to App Store Connect -->
+    <key>uploadSymbols</key>
+    <true/>
+
+    <key>stripSwiftSymbols</key>
+    <true/>
+
+    <!-- Bitcode (not used for macOS) -->
+    <key>uploadBitcode</key>
+    <false/>
+
+    <key>compileBitcode</key>
+    <false/>
+
+    <!-- Provisioning Profile -->
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.roningroupinc.FTPDownloader</key>
+        <string>Mac App Store</string>
+    </dict>
+
+    <!-- App Store Submission -->
+    <key>destination</key>
+    <string>upload</string>
+</dict>
+</plist>

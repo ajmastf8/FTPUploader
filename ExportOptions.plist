@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Distribution method -->
+    <key>method</key>
+    <string>developer-id</string> <!-- Use 'app-store' for App Store distribution -->
+    
+    <!-- Team ID (you'll need to replace this with your actual Team ID) -->
+    <key>teamID</key>
+    <string>6X7BH7FLQ8</string>
+    
+    <!-- Upload to App Store Connect (for app-store method) -->
+    <key>uploadBitcode</key>
+    <false/>
+    <key>uploadSymbols</key>
+    <true/>
+    
+    <!-- Compilation mode -->
+    <key>compileBitcode</key>
+    <false/>
+    
+    <!-- Distribution bundle identifier -->
+    <key>distributionBundleIdentifier</key>
+    <string>com.roningroupinc.ftpsync</string>
+    
+    <!-- Code signing configuration -->
+    <key>signingStyle</key>
+    <string>automatic</string>
+    
+    <!-- Provisioning profiles (if using manual signing) -->
+    <!-- <key>provisioningProfiles</key>
+    <dict>
+        <key>com.yourcompany.ftpdownloader</key>
+        <string>Your Provisioning Profile Name</string>
+    </dict> -->
+    
+    <!-- Strip Swift symbols -->
+    <key>stripSwiftSymbols</key>
+    <true/>
+    
+    <!-- Thinning -->
+    <key>thinning</key>
+    <string>&lt;none&gt;</string>
+</dict>
+</plist>

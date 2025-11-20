@@ -1,0 +1,341 @@
+// SQLite database for file hash tracking
+// Replaces append-only text files with indexed database for better performance
+
+use rusqlite::{Connection, params, Result as SqlResult};
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
+use std::collections::HashMap;
+use chrono::{DateTime, Utc};
+
+// Global database connection pool
+static DB_CONNECTION: OnceLock<Mutex<Connection>> = OnceLock::new();
+
+/// File metadata stored in database
+#[derive(Debug, Clone)]
+pub struct FileHash {
+    pub config_id: String,
+    pub remote_dir: String,
+    pub filename: String,
+    pub file_size: u64,
+    pub mod_time: i64,
+    pub hash: u64,
+    pub first_seen: i64,
+    pub last_seen: i64,
+}
+
+/// Initialize the database and create tables if needed
+/// Should be called once at application startup
+pub fn init_database(db_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🗄️  Initializing SQLite database at: {}", db_path.display());
+
+    // Ensure parent directory exists
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    // Open or create database
+    let conn = Connection::open(db_path)?;
+
+    // Enable WAL mode for better concurrent access
+    conn.execute("PRAGMA journal_mode=WAL", [])?;
+    conn.execute("PRAGMA synchronous=NORMAL", [])?;
+
+    // Create table if it doesn't exist
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS file_hashes (
+            config_id TEXT NOT NULL,
+            remote_dir TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            file_size INTEGER NOT NULL,
+            mod_time INTEGER NOT NULL,
+            hash INTEGER NOT NULL,
+            first_seen INTEGER NOT NULL,
+            last_seen INTEGER NOT NULL,
+            PRIMARY KEY (config_id, remote_dir, filename)
+        )",
+        [],
+    )?;
+
+    // Create indices for fast lookups
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_hash_lookup
+         ON file_hashes(config_id, remote_dir, filename)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_last_seen
+         ON file_hashes(config_id, last_seen)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_config
+         ON file_hashes(config_id)",
+        [],
+    )?;
+
+    println!("✅ Database initialized successfully");
+
+    // Store connection in global static
+    DB_CONNECTION.set(Mutex::new(conn))
+        .map_err(|_| "Failed to set database connection")?;
+
+    Ok(())
+}
+
+/// Get reference to database connection
+fn get_connection() -> Result<&'static Mutex<Connection>, Box<dyn std::error::Error>> {
+    DB_CONNECTION.get()
+        .ok_or_else(|| "Database not initialized. Call init_database() first.".into())
+}
+
+/// Save or update a file hash in the database
+/// Uses UPSERT to handle both insert and update cases
+pub fn save_hash(
+    config_id: &str,
+    remote_dir: &str,
+    filename: &str,
+    file_size: u64,
+    mod_time: DateTime<Utc>,
+    hash: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let conn_mutex = get_connection()?;
+    let conn = conn_mutex.lock().unwrap();
+
+    let now = Utc::now().timestamp();
+    let mod_time_ts = mod_time.timestamp();
+
+    conn.execute(
+        "INSERT INTO file_hashes
+         (config_id, remote_dir, filename, file_size, mod_time, hash, first_seen, last_seen)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+         ON CONFLICT(config_id, remote_dir, filename)
+         DO UPDATE SET
+            file_size = excluded.file_size,
+            mod_time = excluded.mod_time,
+            hash = excluded.hash,
+            last_seen = excluded.last_seen",
+        params![config_id, remote_dir, filename, file_size as i64, mod_time_ts, hash as i64, now, now],
+    )?;
+
+    println!("💾 DB: Saved hash for {}/{} (hash: {})", remote_dir, filename, hash);
+    Ok(())
+}
+
+/// Get a specific file hash from the database
+/// Returns None if file not found
+pub fn get_hash(
+    config_id: &str,
+    remote_dir: &str,
+    filename: &str,
+) -> Result<Option<u64>, Box<dyn std::error::Error>> {
+    let conn_mutex = get_connection()?;
+    let conn = conn_mutex.lock().unwrap();
+
+    let mut stmt = conn.prepare(
+        "SELECT hash FROM file_hashes
+         WHERE config_id = ?1 AND remote_dir = ?2 AND filename = ?3"
+    )?;
+
+    let mut rows = stmt.query(params![config_id, remote_dir, filename])?;
+
+    if let Some(row) = rows.next()? {
+        let hash: i64 = row.get(0)?;
+        Ok(Some(hash as u64))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Load all file hashes for a specific config into a HashMap
+/// Returns HashMap with key = "remote_dir|filename", value = hash
+/// This is compatible with the existing code that uses HashMap<String, u64>
+pub fn load_hashes_for_config(config_id: &str) -> Result<HashMap<String, u64>, Box<dyn std::error::Error>> {
+    let conn_mutex = get_connection()?;
+    let conn = conn_mutex.lock().unwrap();
+
+    let mut stmt = conn.prepare(
+        "SELECT remote_dir, filename, hash FROM file_hashes WHERE config_id = ?1"
+    )?;
+
+    let rows = stmt.query_map(params![config_id], |row| {
+        let remote_dir: String = row.get(0)?;
+        let filename: String = row.get(1)?;
+        let hash: i64 = row.get(2)?;
+        Ok((remote_dir, filename, hash))
+    })?;
+
+    let mut hashes = HashMap::new();
+    for row_result in rows {
+        let (remote_dir, filename, hash) = row_result?;
+        let key = format!("{}|{}", remote_dir, filename);
+        hashes.insert(key, hash as u64);
+    }
+
+    println!("📊 DB: Loaded {} hashes for config {}", hashes.len(), config_id);
+    Ok(hashes)
+}
+
+/// Mark a file as "seen" during current scan
+/// Updates last_seen timestamp without changing other fields
+pub fn mark_file_seen(
+    config_id: &str,
+    remote_dir: &str,
+    filename: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let conn_mutex = get_connection()?;
+    let conn = conn_mutex.lock().unwrap();
+
+    let now = Utc::now().timestamp();
+
+    conn.execute(
+        "UPDATE file_hashes
+         SET last_seen = ?1
+         WHERE config_id = ?2 AND remote_dir = ?3 AND filename = ?4",
+        params![now, config_id, remote_dir, filename],
+    )?;
+
+    Ok(())
+}
+
+/// Remove files from database that haven't been seen since the given timestamp
+/// This automatically cleans up files that no longer exist on the FTP server
+pub fn cleanup_stale_files(
+    config_id: &str,
+    older_than_timestamp: i64,
+) -> Result<usize, Box<dyn std::error::Error>> {
+    let conn_mutex = get_connection()?;
+    let conn = conn_mutex.lock().unwrap();
+
+    let deleted = conn.execute(
+        "DELETE FROM file_hashes
+         WHERE config_id = ?1 AND last_seen < ?2",
+        params![config_id, older_than_timestamp],
+    )?;
+
+    if deleted > 0 {
+        println!("🧹 DB: Cleaned up {} stale file entries for config {}", deleted, config_id);
+    }
+
+    Ok(deleted)
+}
+
+/// Get total count of tracked files for a config
+pub fn get_file_count(config_id: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    let conn_mutex = get_connection()?;
+    let conn = conn_mutex.lock().unwrap();
+
+    let mut stmt = conn.prepare(
+        "SELECT COUNT(*) FROM file_hashes WHERE config_id = ?1"
+    )?;
+
+    let count: i64 = stmt.query_row(params![config_id], |row| row.get(0))?;
+    Ok(count as usize)
+}
+
+/// Migrate data from legacy .hash file to database
+/// Returns number of entries migrated
+pub fn migrate_from_hash_file(
+    config_id: &str,
+    hash_file_path: &Path,
+) -> Result<usize, Box<dyn std::error::Error>> {
+    if !hash_file_path.exists() {
+        println!("ℹ️  No legacy hash file found at: {}", hash_file_path.display());
+        return Ok(0);
+    }
+
+    println!("🔄 Migrating legacy hash file to database: {}", hash_file_path.display());
+
+    let content = std::fs::read_to_string(hash_file_path)?;
+    let mut migrated = 0;
+    let now = Utc::now().timestamp();
+
+    let conn_mutex = get_connection()?;
+    let conn = conn_mutex.lock().unwrap();
+
+    // Use transaction for better performance
+    let tx = conn.unchecked_transaction()?;
+
+    for (line_num, line) in content.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        let parts: Vec<&str> = line.split('|').collect();
+
+        // Parse both new format (5 fields) and legacy format (3 fields)
+        let (remote_dir, filename, file_size, mod_time, hash) = if parts.len() >= 5 {
+            // New format: remote_dir|filename|size|mod_time|hash
+            let remote_dir = parts[0];
+            let filename = parts[1];
+            let file_size: u64 = parts[2].parse().unwrap_or(0);
+            let mod_time: i64 = parts[3].parse().unwrap_or(now);
+            let hash: u64 = parts[4].parse().unwrap_or(0);
+            (remote_dir, filename, file_size, mod_time, hash)
+        } else if parts.len() >= 3 {
+            // Legacy format: remote_dir|filename|hash
+            let remote_dir = parts[0];
+            let filename = parts[1];
+            let hash: u64 = parts[2].parse().unwrap_or(0);
+            (remote_dir, filename, 0u64, now, hash)
+        } else {
+            println!("⚠️  Line {}: Invalid format, skipping: {}", line_num + 1, line);
+            continue;
+        };
+
+        // Insert into database (ignore conflicts - keep existing data)
+        tx.execute(
+            "INSERT OR IGNORE INTO file_hashes
+             (config_id, remote_dir, filename, file_size, mod_time, hash, first_seen, last_seen)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![config_id, remote_dir, filename, file_size as i64, mod_time, hash as i64, now, now],
+        )?;
+
+        migrated += 1;
+    }
+
+    tx.commit()?;
+
+    println!("✅ Migrated {} entries from legacy hash file", migrated);
+
+    // Rename old file to .migrated so we don't re-migrate
+    let backup_path = hash_file_path.with_extension("hash.migrated");
+    if let Err(e) = std::fs::rename(hash_file_path, &backup_path) {
+        println!("⚠️  Could not rename legacy hash file: {}", e);
+    } else {
+        println!("📦 Legacy hash file backed up to: {}", backup_path.display());
+    }
+
+    Ok(migrated)
+}
+
+/// Get database statistics
+pub fn get_stats() -> Result<(usize, usize), Box<dyn std::error::Error>> {
+    let conn_mutex = get_connection()?;
+    let conn = conn_mutex.lock().unwrap();
+
+    let mut stmt = conn.prepare("SELECT COUNT(*) FROM file_hashes")?;
+    let total_files: i64 = stmt.query_row([], |row| row.get(0))?;
+
+    let mut stmt = conn.prepare("SELECT COUNT(DISTINCT config_id) FROM file_hashes")?;
+    let total_configs: i64 = stmt.query_row([], |row| row.get(0))?;
+
+    Ok((total_files as usize, total_configs as usize))
+}
+
+/// Delete all data for a specific configuration
+/// Useful when a configuration is deleted
+pub fn delete_config_data(config_id: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    let conn_mutex = get_connection()?;
+    let conn = conn_mutex.lock().unwrap();
+
+    let deleted = conn.execute(
+        "DELETE FROM file_hashes WHERE config_id = ?1",
+        params![config_id],
+    )?;
+
+    println!("🗑️  DB: Deleted {} entries for config {}", deleted, config_id);
+    Ok(deleted)
+}

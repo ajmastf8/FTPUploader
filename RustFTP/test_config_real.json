@@ -1,0 +1,19 @@
+{
+  "server_address": "ftp.example.com",
+  "port": 21,
+  "username": "anonymous",
+  "password": "anonymous@example.com",
+  "remote_directories": ["/pub"],
+  "local_download_path": "/tmp",
+  "respect_file_paths": false,
+  "download_mode": "delete",
+  "sync_interval": 10000,
+  "stabilization_interval": 2000,
+  "config_id": 1,
+  "config_name": "test-real",
+  "session_id": "test-session-real",
+  "download_aggressiveness": 3,
+  "auto_tune_aggressiveness": false
+}
+
+

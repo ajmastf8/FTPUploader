@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:FTPUploader}",
+            "name": "Debug FTPDownloader",
+            "program": "${workspaceFolder:FTPUploader}/.build/debug/FTPDownloader",
+            "preLaunchTask": "swift: Build Debug FTPDownloader"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:FTPUploader}",
+            "name": "Release FTPDownloader",
+            "program": "${workspaceFolder:FTPUploader}/.build/release/FTPDownloader",
+            "preLaunchTask": "swift: Build Release FTPDownloader"
+        }
+    ]
+}

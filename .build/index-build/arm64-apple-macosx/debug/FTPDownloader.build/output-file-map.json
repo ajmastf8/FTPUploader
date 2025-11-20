@@ -1,0 +1,194 @@
+{
+  "": {
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/master.swiftdeps"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/AppFileManager.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/AppFileManager.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/AppFileManager.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/AppFileManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/AppFileManager.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/AppFileManager.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/BuildConfiguration.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/BuildConfiguration.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/BuildConfiguration.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/BuildConfiguration~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/BuildConfiguration.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/BuildConfiguration.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/ConfigurationStorage.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ConfigurationStorage.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ConfigurationStorage.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ConfigurationStorage~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ConfigurationStorage.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ConfigurationStorage.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/ContentView.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ContentView.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ContentView.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ContentView~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ContentView.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ContentView.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/DemoModeManager.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/DemoModeManager.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/DemoModeManager.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/DemoModeManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/DemoModeManager.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/DemoModeManager.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/FTPConfig.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPConfig.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPConfig.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPConfig~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPConfig.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPConfig.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/FTPConfigurationView.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPConfigurationView.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPConfigurationView.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPConfigurationView~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPConfigurationView.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPConfigurationView.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/FTPDownloaderApp.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPDownloaderApp.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPDownloaderApp.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPDownloaderApp~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPDownloaderApp.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPDownloaderApp.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/FTPService.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPService.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPService.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPService~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPService.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPService.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/FTPServiceProtocol.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPServiceProtocol.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPServiceProtocol.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPServiceProtocol~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPServiceProtocol.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FTPServiceProtocol.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/FileSyncManager.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FileSyncManager.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FileSyncManager.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FileSyncManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FileSyncManager.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/FileSyncManager.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/HelpView.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/HelpView.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/HelpView.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/HelpView~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/HelpView.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/HelpView.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/LaunchAtLoginManager.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LaunchAtLoginManager.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LaunchAtLoginManager.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LaunchAtLoginManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LaunchAtLoginManager.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LaunchAtLoginManager.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/LogCollectionService.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LogCollectionService.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LogCollectionService.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LogCollectionService~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LogCollectionService.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LogCollectionService.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/LogCollectionView.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LogCollectionView.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LogCollectionView.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LogCollectionView~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LogCollectionView.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/LogCollectionView.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/MenuBarContentView.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/MenuBarContentView.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/MenuBarContentView.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/MenuBarContentView~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/MenuBarContentView.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/MenuBarContentView.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/MenuBarIconView.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/MenuBarIconView.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/MenuBarIconView.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/MenuBarIconView~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/MenuBarIconView.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/MenuBarIconView.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/Models/NotificationItem.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationItem.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationItem.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationItem~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationItem.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationItem.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/NotificationFeed.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationFeed.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationFeed.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationFeed~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationFeed.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationFeed.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/NotificationNames.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationNames.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationNames.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationNames~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationNames.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/NotificationNames.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/OutputCapture.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/OutputCapture.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/OutputCapture.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/OutputCapture~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/OutputCapture.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/OutputCapture.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/PurchaseView.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/PurchaseView.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/PurchaseView.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/PurchaseView~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/PurchaseView.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/PurchaseView.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/ReceiptValidator.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ReceiptValidator.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ReceiptValidator.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ReceiptValidator~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ReceiptValidator.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/ReceiptValidator.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/RustFTPBridge.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/RustFTPBridge.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/RustFTPBridge.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/RustFTPBridge~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/RustFTPBridge.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/RustFTPBridge.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/SimpleRustFTPService_FFI.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/SimpleRustFTPService_FFI.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/SimpleRustFTPService_FFI.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/SimpleRustFTPService_FFI~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/SimpleRustFTPService_FFI.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/SimpleRustFTPService_FFI.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/Sources/FTPDownloader/StoreKitManager.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/StoreKitManager.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/StoreKitManager.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/StoreKitManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/StoreKitManager.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/StoreKitManager.dia"
+  },
+  "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/DerivedSources/resource_bundle_accessor.swift": {
+    "dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/resource_bundle_accessor.d",
+    "object": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/resource_bundle_accessor.swift.o",
+    "swiftmodule": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/resource_bundle_accessor~partial.swiftmodule",
+    "swift-dependencies": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/resource_bundle_accessor.swiftdeps",
+    "diagnostics": "/Users/ajmast/Development/GitHub/FTPUploader/.build/index-build/arm64-apple-macosx/debug/FTPDownloader.build/resource_bundle_accessor.dia"
+  }
+}

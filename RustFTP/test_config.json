@@ -1,0 +1,17 @@
+{
+  "server_address": "localhost",
+  "port": 21,
+  "username": "test",
+  "password": "test",
+  "remote_directories": ["/test"],
+  "local_download_path": "/tmp",
+  "respect_file_paths": false,
+  "download_mode": "delete",
+  "sync_interval": 5000,
+  "stabilization_interval": 1000,
+  "config_id": 1,
+  "config_name": "test",
+  "session_id": "test-session",
+  "download_aggressiveness": 3,
+  "auto_tune_aggressiveness": false
+}

@@ -1,0 +1,17 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   0.077173792s  INFO prepare_target{force=false package_id=rust_ftp v1.0.1 (/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP) target="rust_ftp"}: cargo::core::compiler::fingerprint: fingerprint dirty for rust_ftp v1.0.1 (/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP)/Check { test: false }/TargetInner { name: "rust_ftp", doc: true, ..: with_path("/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/src/main.rs", Edition2021) }
+   0.077202875s  INFO prepare_target{force=false package_id=rust_ftp v1.0.1 (/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP) target="rust_ftp"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
+   0.077915833s  INFO prepare_target{force=false package_id=rust_ftp v1.0.1 (/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP) target="rust_ftp"}: cargo::core::compiler::fingerprint: fingerprint dirty for rust_ftp v1.0.1 (/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP)/Check { test: true }/TargetInner { name: "rust_ftp", doc: true, ..: with_path("/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/src/main.rs", Edition2021) }
+   0.077922708s  INFO prepare_target{force=false package_id=rust_ftp v1.0.1 (/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP) target="rust_ftp"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
+warning: rust_ftp@1.0.1: Successfully embedded Info.plist into binary
+warning: rust_ftp@1.0.1: Link arg: /Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/target/debug/build/rust_ftp-e20509898291cf09/out/infoplist.o
+    Checking rust_ftp v1.0.1 (/Users/ajmast/Development/GitHub/FTPDownloader/RustFTP)
+warning: rust_ftp@1.0.1: Successfully embedded Info.plist into binary
+warning: rust_ftp@1.0.1: Link arg: /Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/target/debug/build/rust_ftp-e20509898291cf09/out/infoplist.o
+error: could not compile `rust_ftp` (bin "rust_ftp" test) due to 2 previous errors; 3 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+warning: rust_ftp@1.0.1: Successfully embedded Info.plist into binary
+warning: rust_ftp@1.0.1: Link arg: /Users/ajmast/Development/GitHub/FTPDownloader/RustFTP/target/debug/build/rust_ftp-e20509898291cf09/out/infoplist.o
+error: could not compile `rust_ftp` (bin "rust_ftp") due to 2 previous errors; 3 warnings emitted
