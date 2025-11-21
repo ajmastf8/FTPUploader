@@ -21,7 +21,7 @@ struct MenuBarIconView: View {
 
     private var menuBarIcon: NSImage {
         // Choose icon based on connection status
-        let iconName = hasActiveConnections ? "app-icon-menubar-green" : "app-icon-menubar-orange"
+        let iconName = hasActiveConnections ? "app-icon-menubar-green" : "app-icon-menubar-blue"
         print("🔍 MenuBarIconView: Using icon '\(iconName)'")
 
 
@@ -43,7 +43,7 @@ struct MenuBarIconView: View {
         }
 
         // Fallback to SF Symbol if custom icons not found
-        let fallback = NSImage(systemSymbolName: "arrow.up.circle.fill", accessibilityDescription: "FTP Uploader") ?? NSImage()
+        let fallback = NSImage(systemSymbolName: "arrow.up.circle.fill", accessibilityDescription: "FTP Sender") ?? NSImage()
         fallback.size = NSSize(width: 18, height: 18)
         return fallback
     }

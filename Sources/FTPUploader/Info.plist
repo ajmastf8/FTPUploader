@@ -9,7 +9,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>FTP Uploader</string>
+	<string>FTP Sender</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -26,11 +26,11 @@
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleGetInfoString</key>
-	<string>FTP Uploader 1.0.0 - High-performance automated FTP file uploading with intelligent stabilization monitoring</string>
+	<string>FTP Sender 1.0.0 - High-performance automated FTP file uploading with intelligent stabilization monitoring</string>
 	<key>CFBundleHelpBookFolder</key>
 	<string>Help</string>
 	<key>CFBundleHelpBookName</key>
-	<string>FTP Uploader Help</string>
+	<string>FTP Sender Help</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
@@ -42,7 +42,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.6</string>
+	<string>1.0.1</string>
 	<key>CFBundleVersion</key>
 	<string>20251027.2208</string>
 	<key>LSApplicationCategoryType</key>
@@ -57,11 +57,11 @@
 		<true/>
 	</dict>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>FTP Uploader needs access to monitor files on your Desktop for uploading to FTP servers.</string>
+	<string>FTP Sender needs access to monitor files on your Desktop for uploading to FTP servers.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>FTP Uploader needs access to monitor files in your Documents folder for uploading to FTP servers.</string>
+	<string>FTP Sender needs access to monitor files in your Documents folder for uploading to FTP servers.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>FTP Uploader needs access to monitor files in your Downloads folder for uploading to FTP servers.</string>
+	<string>FTP Sender needs access to monitor files in your Downloads folder for uploading to FTP servers.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
@@ -69,7 +69,7 @@
 	<key>NSMainStoryboardFile</key>
 	<string>Main</string>
 	<key>NSNetworkVolumesUsageDescription</key>
-	<string>FTP Uploader requires network access to connect to FTP servers and upload files with high-performance concurrent processing.</string>
+	<string>FTP Sender requires network access to connect to FTP servers and upload files with high-performance concurrent processing.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

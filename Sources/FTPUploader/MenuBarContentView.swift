@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Compact menu bar interface for FTP Uploader
+/// Compact menu bar interface for FTP Sender
 /// Shows status of active configurations and provides quick controls
 struct MenuBarContentView: View {
     @ObservedObject var syncManager: FileSyncManager
@@ -16,7 +16,7 @@ struct MenuBarContentView: View {
             // Header
             HStack {
                 // Use custom menu bar icon to match the actual menu bar
-                if let icon = NSImage(named: "app-icon-menubar-orange") {
+                if let icon = NSImage(named: "app-icon-menubar-blue") {
                     Image(nsImage: icon)
                         .resizable()
                         .frame(width: 16, height: 16)
@@ -26,7 +26,7 @@ struct MenuBarContentView: View {
                         .font(.title3)
                         .foregroundColor(.orange)
                 }
-                Text("FTP Uploader")
+                Text("FTP Sender")
                     .font(.headline)
                 Spacer()
             }
@@ -227,7 +227,7 @@ struct MenuBarContentView: View {
         // Look for existing main window
         var foundWindow = false
         for window in NSApplication.shared.windows {
-            if window.title == "FTP Uploader" || window.identifier?.rawValue == "main" {
+            if window.title == "FTP Sender" || window.identifier?.rawValue == "main" {
                 print("🪟 Found existing main window, bringing to front")
                 window.makeKeyAndOrderFront(nil)
                 window.orderFrontRegardless()
@@ -406,7 +406,7 @@ struct MenuBarConfigRow: View {
         // Look for existing main window
         var foundWindow = false
         for window in NSApplication.shared.windows {
-            if window.title == "FTP Uploader" || window.identifier?.rawValue == "main" {
+            if window.title == "FTP Sender" || window.identifier?.rawValue == "main" {
                 print("🪟 Found existing main window, bringing to front")
                 window.makeKeyAndOrderFront(nil)
                 window.orderFrontRegardless()

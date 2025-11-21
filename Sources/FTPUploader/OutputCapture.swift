@@ -34,7 +34,7 @@ class OutputCapture: ObservableObject {
 
         let header = """
         ========================================
-        FTP Uploader Console Output Log
+        FTP Sender Console Output Log
         Session Start: \(sessionStartTime)
         Process ID: \(ProcessInfo.processInfo.processIdentifier)
         ========================================

@@ -43,7 +43,7 @@ struct ContentView: View {
                             .frame(width: 32, height: 32)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
 
-                        Text("FTP Uploader")
+                        Text("FTP Sender")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
@@ -88,7 +88,7 @@ struct ContentView: View {
                     .foregroundColor(.blue)
                     .font(.system(size: 14))
 
-                Text("FTP Uploader runs from the menu bar. Closing this window keeps your syncs running in the background.")
+                Text("FTP Sender runs from the menu bar. Closing this window keeps your syncs running in the background.")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
 
@@ -284,9 +284,9 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
-                // FTP Uploader menu
-                Menu("FTP Uploader") {
-                    Button("About FTP Uploader") {
+                // FTP Sender menu
+                Menu("FTP Sender") {
+                    Button("About FTP Sender") {
                         NSApp.orderFrontStandardAboutPanel(nil)
                     }
 
@@ -342,7 +342,7 @@ struct ContentView: View {
 
                 // Help menu
                 Menu("Help") {
-                    Button("FTP Uploader Help") {
+                    Button("FTP Sender Help") {
                         helpManager.openHelp()
                     }
 

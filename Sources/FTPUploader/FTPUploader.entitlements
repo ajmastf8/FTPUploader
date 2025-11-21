@@ -4,7 +4,7 @@
 <dict>
     <!-- Application Identifier (required for App Store with provisioning profile) -->
     <key>com.apple.application-identifier</key>
-    <string>6X7BH7FLQ8.com.roningroupinc.FTPDownloader</string>
+    <string>6X7BH7FLQ8.com.roningroupinc.ftpsender</string>
 
     <!-- App Sandbox (required for App Store) -->
     <key>com.apple.security.app-sandbox</key>

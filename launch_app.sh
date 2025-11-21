@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# FTP Uploader App Launcher
+# FTP Sender App Launcher
 # Launches the .app bundle from terminal to see logs
 
-echo "🚀 FTP Uploader App Launcher"
+echo "🚀 FTP Sender App Launcher"
 echo "============================"
 
 # Check if we're in the right directory
@@ -27,7 +27,7 @@ fi
 
 echo "📱 Found app bundle at: $APP_PATH"
 echo ""
-echo "🚀 Launching FTP Uploader app..."
+echo "🚀 Launching FTP Sender app..."
 echo "📋 Logs will appear below:"
 echo "================================"
 echo ""

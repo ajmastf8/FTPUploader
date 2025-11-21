@@ -161,7 +161,7 @@ class LogCollectionService: ObservableObject {
                     continue
                 }
 
-                // Filter for FTP Uploader app logs
+                // Filter for FTP Sender app logs
                 if logEntry.subsystem.contains("FTPUploader") ||
                    logEntry.category.contains("FTPUploader") ||
                    logEntry.composedMessage.contains("FTP") ||
@@ -207,7 +207,7 @@ class LogCollectionService: ObservableObject {
 
             if logEntries.isEmpty {
                 return """
-                No relevant FTP Uploader log entries found for the specified criteria.
+                No relevant FTP Sender log entries found for the specified criteria.
 
                 This may be normal if:
                 • The app was recently started and hasn't generated logs yet
@@ -553,7 +553,7 @@ class LogCollectionService: ObservableObject {
             let ftpProcesses = lines.filter { $0.contains("rust_ftp") || $0.contains("FTPUploader") }
 
             if ftpProcesses.isEmpty {
-                processInfo += "ℹ️ No active FTP Uploader processes found.\n"
+                processInfo += "ℹ️ No active FTP Sender processes found.\n"
                 processInfo += "💡 This might explain why FTP operations aren't working.\n\n"
             } else {
                 processInfo += "🔍 Active FTP-related processes found: \(ftpProcesses.count)\n\n"

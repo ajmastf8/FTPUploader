@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# FTP Uploader Development Build
+# FTP Sender Development Build
 # Builds development version - no expiration, shows trial UI for testing
 # Output: build/dev/
 #
@@ -14,11 +14,11 @@ set -e
 TEST_EXPIRED=false
 if [ "$1" = "--test-expired" ]; then
     TEST_EXPIRED=true
-    echo "🍎 FTP Uploader Development Build (TEST EXPIRED TRIAL)"
+    echo "🍎 FTP Sender Development Build (TEST EXPIRED TRIAL)"
     echo "======================================================="
     echo "⚠️  Purchase UI enabled with expired trial for testing"
 else
-    echo "🍎 FTP Uploader Development Build"
+    echo "🍎 FTP Sender Development Build"
     echo "=================================="
 fi
 echo "📂 Output: build/dev/"
@@ -97,10 +97,10 @@ fi
 
 # Create build directory
 BUILD_DIR="build/dev"
-APP_NAME="FTPUploader.app"
+APP_NAME="FTPSender.app"
 APP_PATH="$BUILD_DIR/$APP_NAME"
 
-echo "📦 Building FTP Uploader (Development Build)..."
+echo "📦 Building FTP Sender (Development Build)..."
 echo ""
 
 # Clean previous dev builds
@@ -143,8 +143,8 @@ if [ $? -eq 0 ]; then
     fi
 
     # Copy menu bar icons
-    if [ -f "app-icon-menubar-orange.png" ]; then
-        cp "app-icon-menubar-orange.png" "$APP_PATH/Contents/Resources/"
+    if [ -f "app-icon-menubar-blue.png" ]; then
+        cp "app-icon-menubar-blue.png" "$APP_PATH/Contents/Resources/"
         echo "✅ Menu bar orange icon copied to bundle"
     fi
     if [ -f "app-icon-menubar-green.png" ]; then
@@ -178,9 +178,9 @@ if [ $? -eq 0 ]; then
     <key>CFBundleExecutable</key>
     <string>FTPUploader</string>
     <key>CFBundleIdentifier</key>
-    <string>com.roningroupinc.FTPUploader</string>
+    <string>com.roningroupinc.ftpsender</string>
     <key>CFBundleName</key>
-    <string>FTP Uploader</string>
+    <string>FTP Sender</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

@@ -145,7 +145,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem(title: "Show Main Window", action: #selector(showMainWindow), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit FTP Uploader", action: #selector(quitApp), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "Quit FTP Sender", action: #selector(quitApp), keyEquivalent: "q"))
 
         statusItem?.menu = menu
         statusItem?.button?.performClick(nil)
@@ -161,7 +161,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Look for existing main window
         var foundWindow = false
         for window in NSApplication.shared.windows {
-            if window.title == "FTP Uploader" || window.identifier?.rawValue == "main" {
+            if window.title == "FTP Sender" || window.identifier?.rawValue == "main" {
                 print("🪟 Found existing main window, bringing to front")
                 window.makeKeyAndOrderFront(nil)
                 window.orderFrontRegardless()
@@ -191,7 +191,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Configs exist - hide the main window to go into menu bar-only mode
         print("🪟 Found \(configs.count) configuration(s) - hiding main window for menu bar-only mode")
         for window in NSApplication.shared.windows {
-            if window.title == "FTP Uploader" || window.identifier?.rawValue == "main" {
+            if window.title == "FTP Sender" || window.identifier?.rawValue == "main" {
                 print("🪟 Hiding main window - app will run in menu bar only")
                 window.orderOut(nil)
                 break
@@ -222,7 +222,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             case .connected, .connecting:
                 iconName = "app-icon-menubar-green"  // Active states use green
             case .idle:
-                iconName = "app-icon-menubar-orange"  // Idle uses orange
+                iconName = "app-icon-menubar-blue"  // Idle uses orange
             }
 
             // Try to load the custom menu bar icon
@@ -256,7 +256,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 let config = NSImage.SymbolConfiguration(pointSize: 0, weight: .regular)
                     .applying(.init(paletteColors: [symbolColor]))
-                if let image = NSImage(systemSymbolName: "arrow.up.circle.fill", accessibilityDescription: "FTP Uploader") {
+                if let image = NSImage(systemSymbolName: "arrow.up.circle.fill", accessibilityDescription: "FTP Sender") {
                     button.image = image.withSymbolConfiguration(config)
                 }
             }
@@ -835,7 +835,7 @@ struct FTPUploaderApp: App {
         }()
 
         // Main window (hidden by default - menu bar app)
-        return WindowGroup("FTP Uploader", id: "main") {
+        return WindowGroup("FTP Sender", id: "main") {
             Group {
                 // Show loading state while checking purchase status
                 if BuildType.current.showPurchaseUI && storeManager.isCheckingPurchaseStatus {
@@ -892,7 +892,7 @@ struct FTPUploaderApp: App {
             CommandGroup(replacing: .toolbar) { }
 
             CommandGroup(replacing: .appInfo) {
-                Button("About FTP Uploader") {
+                Button("About FTP Sender") {
                     showCustomAboutPanel()
                 }
 
@@ -936,7 +936,7 @@ struct FTPUploaderApp: App {
             }
 
             CommandGroup(replacing: .help) {
-                Button("FTP Uploader Help") {
+                Button("FTP Sender Help") {
                     helpManager.openHelp()
                 }
                 .keyboardShortcut("?", modifiers: [.command])
@@ -959,7 +959,7 @@ struct FTPUploaderApp: App {
     }
     
     private func setupLogging() {
-        print("🚀 FTP Uploader Starting...")
+        print("🚀 FTP Sender Starting...")
         print("📱 App Version: \(getAppVersion())")
         print("🏗️  Build Date: \(getBuildDate())")
         print("🖥️  Platform: macOS")
@@ -1008,7 +1008,7 @@ struct FTPUploaderApp: App {
     
     private func showCustomAboutPanel() {
         let alert = NSAlert()
-        alert.messageText = "About FTP Uploader"
+        alert.messageText = "About FTP Sender"
         alert.informativeText = """
         Version \(getAppVersion())
 

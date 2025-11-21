@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# FTP Uploader App Store Build Script
+# FTP Sender App Store Build Script
 # Supports beta builds and version increment
 # Usage:
 #   ./build_appstore.sh        - Build current version for production
@@ -17,7 +17,7 @@ elif [ "$1" = "-inc" ]; then
     BUILD_MODE="increment"
 fi
 
-echo "🏗️  FTP Uploader App Store Build"
+echo "🏗️  FTP Sender App Store Build"
 echo "====================================="
 
 # Check if we're in the right directory
@@ -30,7 +30,7 @@ fi
 BASE_BUILD_DIR="build/appstore"
 RELEASE_DIR="$BASE_BUILD_DIR/release"
 BETA_DIR="$BASE_BUILD_DIR/beta"
-APP_NAME="FTPUploader.app"
+APP_NAME="FTPSender.app"
 
 # Get current version from Info.plist
 INFO_PLIST="Sources/FTPUploader/Info.plist"
@@ -41,7 +41,7 @@ CURRENT_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString"
 archive_old_builds() {
     local DIR=$1
     local OLD_DIR="$DIR/old"
-    local PATTERN=$2  # e.g., "FTPUploader-*-beta*.app" or "FTPUploader-*.app"
+    local PATTERN=$2  # e.g., "FTPSender-*-beta*.app" or "FTPSender-*.app"
 
     mkdir -p "$OLD_DIR"
 
@@ -120,7 +120,7 @@ if [ "$BUILD_MODE" = "beta" ]; then
     echo ""
 
     # Archive existing builds before creating new one
-    archive_old_builds "$BETA_DIR" "FTPUploader-*-beta*.app"
+    archive_old_builds "$BETA_DIR" "FTPSender-*-beta*.app"
 
 elif [ "$BUILD_MODE" = "increment" ]; then
     echo "⬆️  Increment Version Mode"
@@ -149,7 +149,7 @@ elif [ "$BUILD_MODE" = "increment" ]; then
     echo ""
 
     # Archive existing builds before creating new one
-    archive_old_builds "$RELEASE_DIR" "FTPUploader-*.app"
+    archive_old_builds "$RELEASE_DIR" "FTPSender-*.app"
 
 else
     echo "📦 Production Build Mode"
@@ -166,7 +166,7 @@ else
     echo ""
 
     # Archive existing builds before creating new one
-    archive_old_builds "$RELEASE_DIR" "FTPUploader-*.app"
+    archive_old_builds "$RELEASE_DIR" "FTPSender-*.app"
 fi
 
 echo "📁 Output: $BUILD_DIR"
@@ -256,7 +256,7 @@ echo ""
 echo "📱 Creating app bundle..."
 
 # Set app path with version in filename
-APP_PATH="$BUILD_DIR/FTPUploader${FILE_SUFFIX}.app"
+APP_PATH="$BUILD_DIR/FTPSender$FILE_SUFFIX.app"
 
 # Create app bundle structure
 mkdir -p "$APP_PATH/Contents/MacOS"
@@ -286,8 +286,8 @@ if [ -f "app-icon.icns" ]; then
 fi
 
 # Copy menu bar icons
-if [ -f "app-icon-menubar-orange.png" ]; then
-    cp "app-icon-menubar-orange.png" "$APP_PATH/Contents/Resources/"
+if [ -f "app-icon-menubar-blue.png" ]; then
+    cp "app-icon-menubar-blue.png" "$APP_PATH/Contents/Resources/"
     echo "✅ Menu bar orange icon copied"
 fi
 if [ -f "app-icon-menubar-green.png" ]; then
@@ -309,9 +309,9 @@ cat > "$APP_PATH/Contents/Info.plist" << EOF
     <key>CFBundleExecutable</key>
     <string>FTPUploader</string>
     <key>CFBundleIdentifier</key>
-    <string>com.roningroupinc.FTPUploader</string>
+    <string>com.roningroupinc.ftpsender</string>
     <key>CFBundleName</key>
-    <string>FTP Uploader</string>
+    <string>FTP Sender</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -355,7 +355,7 @@ find "$APP_PATH" -type f -name ".DS_Store" -delete
 echo "📱 Signing FTPUploader with entitlements..."
 codesign --force --sign "$SIGNING_CERT" \
     --entitlements "$APP_ENTITLEMENTS" \
-    --identifier "com.roningroupinc.FTPUploader" \
+    --identifier "com.roningroupinc.ftpsender" \
     --options runtime \
     --timestamp \
     "$APP_PATH/Contents/MacOS/FTPUploader"
@@ -365,7 +365,7 @@ echo "  ✅ FTPUploader signed"
 echo "📦 Signing app bundle..."
 codesign --force --sign "$SIGNING_CERT" \
     --entitlements "$APP_ENTITLEMENTS" \
-    --identifier "com.roningroupinc.FTPUploader" \
+    --identifier "com.roningroupinc.ftpsender" \
     --options runtime \
     --timestamp \
     "$APP_PATH"
@@ -380,12 +380,12 @@ echo "✅ Signature verification complete"
 # Create .pkg installer for App Store submission
 echo ""
 echo "📦 Creating .pkg installer for App Store..."
-PKG_PATH="$BUILD_DIR/FTPUploader${FILE_SUFFIX}.pkg"
-SIGNED_PKG_PATH="$BUILD_DIR/FTPUploader${FILE_SUFFIX}-signed.pkg"
+PKG_PATH="$BUILD_DIR/FTPSender$FILE_SUFFIX.pkg"
+SIGNED_PKG_PATH="$BUILD_DIR/FTPSender$FILE_SUFFIX-signed.pkg"
 
 # Create a copy with the standard name for packaging
-# This ensures the installed app is named "FTPUploader.app" without version suffix
-PACKAGE_APP_PATH="$BUILD_DIR/FTPUploader.app"
+# This ensures the installed app is named "FTPSender.app" without version suffix
+PACKAGE_APP_PATH="$BUILD_DIR/FTPSender.app"
 if [ "$APP_PATH" != "$PACKAGE_APP_PATH" ]; then
     echo "📝 Creating package copy without version suffix..."
     # Remove any existing copy first to avoid stale versions

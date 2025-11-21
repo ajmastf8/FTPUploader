@@ -30,7 +30,7 @@ struct PurchaseView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.orange)
 
-                Text("Purchase to continue using FTP Uploader")
+                Text("Purchase to continue using FTP Sender")
                     .font(.title3)
                     .foregroundColor(.secondary)
             }

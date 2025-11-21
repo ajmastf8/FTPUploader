@@ -1000,7 +1000,7 @@ struct FTPServerBrowserView: View {
 
                         // Always include root and add found directories
                         var allDirectories = ["/"]
-                        allDirectories.append(contentsOf: items)
+                        allDirectories.append(contentsOf: items.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending })
 
                         serverDirectories = allDirectories
 
@@ -1063,7 +1063,7 @@ struct FTPServerBrowserView: View {
                         // Add the new directory to the list if not already there
                         if !serverDirectories.contains(newDirPath) {
                             serverDirectories.append(newDirPath)
-                            serverDirectories.sort()
+                            serverDirectories.sort { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
                         }
 
                         // Select the newly created directory

@@ -312,8 +312,8 @@ class SimpleRustFTPService_FFI: FTPService {
             let currentStatusContent = "\(stage): \(filename) (\(Int(progress * 100))%)"
             let now = Date()
 
-            // Detect cycling pattern
-            if seenFiles.contains(filename) {
+            // Detect cycling pattern - but ignore empty filenames (no files to upload is normal)
+            if !filename.isEmpty && seenFiles.contains(filename) {
                 if cyclingStartTime == nil {
                     cyclingStartTime = now
                     print("🔄 CYCLING DETECTED: File \(filename) seen before")
@@ -323,20 +323,32 @@ class SimpleRustFTPService_FFI: FTPService {
                     self.stopFTPProcess(configId: config.id)
                     return
                 }
-            } else {
+            } else if !filename.isEmpty {
                 seenFiles.insert(filename)
+                cyclingStartTime = nil
+            } else {
+                // Empty filename = no files to process, reset cycling detection
                 cyclingStartTime = nil
             }
 
-            // Check if stuck
+            // Check if stuck - but only during active operations, not when idle/scanning
             if currentStatusContent != lastStatusContent {
                 lastStatusUpdate = now
                 lastStatusContent = currentStatusContent
             } else if let lastUpdate = lastStatusUpdate,
                      now.timeIntervalSince(lastUpdate) > stuckTimeoutSeconds {
-                print("⚠️ STUCK TIMEOUT: Terminating...")
-                self.stopFTPProcess(configId: config.id)
-                return
+                // Only trigger stuck timeout during active uploads, not when idle
+                // Idle states: Scanning, Complete, Waiting, Connected, No files
+                let idleStages = ["Scanning", "Complete", "Waiting", "Connected", "Finished", "No files"]
+                let isIdle = idleStages.contains { stage.contains($0) } || filename.isEmpty
+
+                if !isIdle {
+                    print("⚠️ STUCK TIMEOUT: Terminating (stuck on \(stage): \(filename))...")
+                    self.stopFTPProcess(configId: config.id)
+                    return
+                }
+                // Reset the timer for idle states so we don't keep checking
+                lastStatusUpdate = now
             }
 
             self.statusCallback?(UInt32(config.id.hashValue & 0xFFFFFFFF), stage, filename, progress)

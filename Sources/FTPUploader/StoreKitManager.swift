@@ -2,7 +2,7 @@ import Foundation
 import StoreKit
 import SwiftUI
 
-/// Manages in-app purchases and trial period for FTP Uploader
+/// Manages in-app purchases and trial period for FTP Sender
 @MainActor
 class StoreKitManager: NSObject, ObservableObject {
 

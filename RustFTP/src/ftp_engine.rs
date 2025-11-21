@@ -1320,6 +1320,9 @@ pub fn run_ftp_with_args(
         }
     }
 
+    // Create persistent session state that accumulates across all iterations
+    let session_state = Arc::new(Mutex::new(SessionState::new()));
+
     // Main continuous processing loop
     let mut iteration = 0;
     loop {
@@ -1352,7 +1355,8 @@ pub fn run_ftp_with_args(
             &shutdown_file,
             &shutdown_flag,
             &connection_manager,
-            iteration
+            iteration,
+            &session_state
         );
         
         match result {
@@ -1458,7 +1462,8 @@ fn process_single_iteration(
     shutdown_file: &str,
     shutdown_flag: &Arc<AtomicBool>,
     connection_manager: &Arc<ConnectionManager>,
-    iteration: usize
+    iteration: usize,
+    session_state: &Arc<Mutex<SessionState>>
 ) -> Result<(), Box<dyn std::error::Error>> {
     
     // Connect to FTP for directory scanning
@@ -1598,16 +1603,17 @@ fn process_single_iteration(
     config_log(&config, &format!("{} Using {} parallel connections for upload", "🔧".blue(), max_connections));
 
     let files_processed = process_files(
-        &mut ftp, 
-        &all_files, 
-        &config, 
-        status_file, 
-        session_file, 
-        hash_file, 
+        &mut ftp,
+        &all_files,
+        &config,
+        status_file,
+        session_file,
+        hash_file,
         shutdown_file,
         shutdown_flag,
         connection_manager,
-        max_connections
+        max_connections,
+        session_state
     )?;
     
     // Close FTP connection
@@ -1960,11 +1966,11 @@ fn process_files(
     shutdown_file: &str,
     shutdown_flag: &Arc<AtomicBool>,
     connection_manager: &Arc<ConnectionManager>,
-    max_parallel_connections: usize
+    max_parallel_connections: usize,
+    session_state: &Arc<Mutex<SessionState>>
 ) -> Result<usize, Box<dyn std::error::Error>> {
-    
-    // Initialize session state tracking
-    let session_state = Arc::new(Mutex::new(SessionState::new()));
+
+    // Session state is passed in from the main loop to accumulate across iterations
     
     // Hash-based file discovery for keep mode
     let files_to_process = all_files.to_vec();
@@ -2222,6 +2228,7 @@ fn process_files(
         let _status_sender_local = status_sender_clone.clone();
         let config_arc_local = config_arc_clone.clone();
         let connection_manager_local = connection_manager.clone();
+        let session_state_local = session_state_clone.clone(); // Clone Arc for this thread
         
         // DEBUG: Log file processing start
         config_log(&config, &format!("🔍 DEBUG: [Thread-{}] Starting to process {} ({}/{})",
@@ -2496,27 +2503,35 @@ fn process_files(
                 
                 // Update session state with download time and file size
                 let upload_time = upload_start.elapsed().as_secs_f64();
-                if let Ok(mut state) = session_state_clone.lock() {
-                    state.add_file_upload(initial_size.unwrap_or(0) as usize, upload_time);
-                    
-                    // Debug logging for session stats
-                    config_log(&config, &format!("📊 [Thread-{}] Session stats updated: {} files, {} bytes, {:.2}s, {:.2} MB/s avg", 
-                        thread_id.to_string().cyan(),
-                        state.total_files.to_string().green(),
-                        state.total_bytes.to_string().blue(),
-                        state.total_upload_time.to_string().yellow(),
-                        state.get_average_speed_mbps().to_string().cyan()
-                    ));
-                    
-                    // Send session report only when we have meaningful data (files processed)
-                    // This preserves the last valid speed until new files are processed
-                    if state.total_files > 0 && state.total_files % 3 == 0 {
-                        if let Err(e) = send_session_report(&session_file, &config, &state) {
-                            config_log(&config, &format!("⚠️ [Thread-{}] Failed to send session report: {}", 
-                                thread_id.to_string().yellow(), 
-                                e.to_string().yellow()
-                            ));
+                match session_state_local.lock() {
+                    Ok(mut state) => {
+                        state.add_file_upload(initial_size.unwrap_or(0) as usize, upload_time);
+
+                        // Debug logging for session stats
+                        config_log(&config, &format!("📊 [Thread-{}] Session stats updated: {} files, {} bytes, {:.2}s, {:.2} MB/s avg",
+                            thread_id.to_string().cyan(),
+                            state.total_files.to_string().green(),
+                            state.total_bytes.to_string().blue(),
+                            state.total_upload_time.to_string().yellow(),
+                            state.get_average_speed_mbps().to_string().cyan()
+                        ));
+
+                        // Send session report only when we have meaningful data (files processed)
+                        // This preserves the last valid speed until new files are processed
+                        if state.total_files > 0 && state.total_files % 3 == 0 {
+                            if let Err(e) = send_session_report(&session_file, &config, &state) {
+                                config_log(&config, &format!("⚠️ [Thread-{}] Failed to send session report: {}",
+                                    thread_id.to_string().yellow(),
+                                    e.to_string().yellow()
+                                ));
+                            }
                         }
+                    }
+                    Err(e) => {
+                        config_log(&config, &format!("❌ [Thread-{}] Failed to lock session state: {}",
+                            thread_id.to_string().red(),
+                            e.to_string().red()
+                        ));
                     }
                 }
                 

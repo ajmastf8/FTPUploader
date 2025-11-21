@@ -34,7 +34,7 @@ struct HelpView: NSViewRepresentable {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>FTP Uploader Help</title>
+            <title>FTP Sender Help</title>
             <style>
                 body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; line-height: 1.6; }
                 .header { text-align: center; margin-bottom: 30px; }
@@ -45,7 +45,7 @@ struct HelpView: NSViewRepresentable {
         </head>
         <body>
             <div class="header">
-                <h1>🚀 FTP Uploader Help</h1>
+                <h1>🚀 FTP Sender Help</h1>
                 <p>High-performance automated FTP file uploading</p>
             </div>
 
@@ -128,7 +128,7 @@ struct HelpWindow: View {
         VStack(spacing: 0) {
             // Header with search
             HStack {
-                Text("FTP Uploader Help")
+                Text("FTP Sender Help")
                     .font(.largeTitle)
                     .fontWeight(.bold)
 

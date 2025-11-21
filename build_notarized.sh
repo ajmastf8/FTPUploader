@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# FTP Uploader Notarized Build Script
+# FTP Sender Notarized Build Script
 # Builds with 15-day expiration, no purchase UI
 # Output: build/notarized/
 
 set -e
 
-echo "🏗️  FTP Uploader Notarized Build"
+echo "🏗️  FTP Sender Notarized Build"
 echo "===================================="
 echo "📅 15-day expiration from build date"
 echo "🚫 Purchase UI disabled"
@@ -23,17 +23,17 @@ fi
 # Using the second Developer ID certificate as the first one has chain issues
 CERTIFICATE_NAME="5D81AE7E8E898B892D408AFF1479B2F5BA9A81D2"
 TEAM_ID="6X7BH7FLQ8"
-BUNDLE_ID="com.roningroupinc.FTPUploader"
+BUNDLE_ID="com.roningroupinc.ftpsender"
 APPLEID="aj@ajmast.com"
 APPLEIDPASS="zsbr-skjw-ippy-egwh"
 
 # Paths
 PROJECT_DIR="$(pwd)"
 BUILD_DIR="build/notarized"
-APP_NAME="FTPUploader.app"
+APP_NAME="FTPSender.app"
 APP_PATH="$BUILD_DIR/$APP_NAME"
-DMG_PATH="$BUILD_DIR/FTPUploader.dmg"
-ZIP_PATH="$BUILD_DIR/FTPUploader.zip"
+DMG_PATH="$BUILD_DIR/FTPSender.dmg"
+ZIP_PATH="$BUILD_DIR/FTPSender.zip"
 
 # Function to check if Rust binary needs rebuilding
 check_rust_library() {
@@ -137,8 +137,8 @@ if [ -f "app-icon.icns" ]; then
 fi
 
 # Copy menu bar icons (color-coded status indicators)
-if [ -f "app-icon-menubar-orange.png" ]; then
-    cp "app-icon-menubar-orange.png" "$APP_PATH/Contents/Resources/"
+if [ -f "app-icon-menubar-blue.png" ]; then
+    cp "app-icon-menubar-blue.png" "$APP_PATH/Contents/Resources/"
     echo "✅ Menu bar orange icon copied"
 fi
 if [ -f "app-icon-menubar-green.png" ]; then
@@ -164,7 +164,7 @@ cat > "$APP_PATH/Contents/Info.plist" << EOF
     <key>CFBundleIdentifier</key>
     <string>$BUNDLE_ID</string>
     <key>CFBundleName</key>
-    <string>FTP Uploader</string>
+    <string>FTP Sender</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -197,7 +197,7 @@ echo "Using certificate: $CERTIFICATE_NAME"
 echo "📱 Signing main app binary (with embedded Rust FFI library)..."
 codesign --force --options runtime --sign "$CERTIFICATE_NAME" \
     --entitlements "$PROJECT_DIR/Sources/FTPUploader/FTPUploader.entitlements" \
-    --identifier "com.roningroupinc.FTPUploader" \
+    --identifier "com.roningroupinc.ftpsender" \
     --timestamp \
     "$APP_PATH/Contents/MacOS/FTPUploader"
 echo "✅ Main binary signed"
@@ -248,7 +248,7 @@ if command -v create-dmg >/dev/null 2>&1; then
 
     # Use create-dmg with icon support
     create-dmg \
-        --volname "FTP Uploader" \
+        --volname "FTP Sender" \
         --volicon "$PROJECT_DIR/app-icon.icns" \
         --window-pos 200 120 \
         --window-size 600 400 \
@@ -256,7 +256,7 @@ if command -v create-dmg >/dev/null 2>&1; then
         --icon "$APP_NAME" 175 190 \
         --hide-extension "$APP_NAME" \
         --app-drop-link 425 190 \
-        "FTPUploader.dmg" \
+        "FTPSender.dmg" \
         "$DMG_TEMP_DIR"
 
     # Recreate the Applications link after DMG creation
@@ -266,12 +266,12 @@ if command -v create-dmg >/dev/null 2>&1; then
         echo "✅ Professional DMG created with custom icon successfully!"
     else
         echo "⚠️  Failed to create DMG with create-dmg, falling back to basic approach"
-        hdiutil create -volname "FTP Uploader" -srcfolder "$DMG_TEMP_DIR" -ov -format UDZO "FTPUploader.dmg"
+        hdiutil create -volname "FTP Sender" -srcfolder "$DMG_TEMP_DIR" -ov -format UDZO "FTPSender.dmg"
     fi
 else
     echo "ℹ️  create-dmg not found, using basic hdiutil approach..."
     # Create basic DMG
-    hdiutil create -volname "FTP Uploader" -srcfolder "$DMG_TEMP_DIR" -ov -format UDZO "FTPUploader.dmg"
+    hdiutil create -volname "FTP Sender" -srcfolder "$DMG_TEMP_DIR" -ov -format UDZO "FTPSender.dmg"
 fi
 
 # Set the DMG file icon (the file itself, not just the volume)
@@ -280,11 +280,11 @@ echo "🎨 Setting DMG file icon..."
 ACTUAL_DMG=$(ls -t FTPUploader*.dmg 2>/dev/null | head -1)
 if [ -n "$ACTUAL_DMG" ] && [ -f "$ACTUAL_DMG" ]; then
     # Move it to the expected name if different
-    if [ "$ACTUAL_DMG" != "FTPUploader.dmg" ]; then
-        mv "$ACTUAL_DMG" "FTPUploader.dmg"
+    if [ "$ACTUAL_DMG" != "FTPSender.dmg" ]; then
+        mv "$ACTUAL_DMG" "FTPSender.dmg"
     fi
     if command -v fileicon >/dev/null 2>&1; then
-        if fileicon set "FTPUploader.dmg" "$PROJECT_DIR/app-icon.icns" 2>/dev/null; then
+        if fileicon set "FTPSender.dmg" "$PROJECT_DIR/app-icon.icns" 2>/dev/null; then
             echo "✅ DMG file icon set successfully"
         else
             echo "⚠️  Failed to set DMG file icon"
@@ -311,7 +311,7 @@ codesign --force --sign "$CERTIFICATE_NAME" \
 # Create ZIP for notarization
 echo "📦 Creating ZIP for notarization..."
 cd "$BUILD_DIR"
-zip -r "FTPUploader.zip" "$APP_NAME"
+zip -r "FTPSender.zip" "$APP_NAME"
 cd -
 
 # Submit for notarization
