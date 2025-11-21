@@ -2097,21 +2097,57 @@ fn process_files(
 
         let stabilization_start = std::time::Instant::now();
         let config_clone = config.clone();
+        let status_file_clone = status_file.to_string();
+        let stabilized_counter = Arc::new(AtomicUsize::new(0));
+        let total_files = files_to_process.len();
+        let local_source = config.local_source_path.clone();
 
         // Monitor all files in PARALLEL for stability using custom thread pool
-        // Each thread sleeps for the stabilization interval, so all files are monitored simultaneously
+        // Uses fast local file size checking instead of fixed sleep
         let stable_files: Vec<(String, String)> = pool.install(|| {
             files_to_process
                 .par_iter()
                 .filter_map(|(filename, remote_dir)| {
-                    // Each thread monitors one file independently
-                    // Sleep for stabilization interval to let file finish writing
-                    std::thread::sleep(std::time::Duration::from_secs(config_clone.stabilization_interval));
+                    // Build full path to the local file
+                    let full_path = std::path::PathBuf::from(&local_source).join(filename);
 
-                    // After sleep, file should be stable - return it
-                    config_log(&config_clone, &format!("✅ {} stable after {}s wait",
+                    // Fast stabilization: check file size repeatedly until stable
+                    let check_interval_ms = 100; // Check every 100ms
+                    let max_checks = (config_clone.stabilization_interval * 1000 / check_interval_ms).max(1);
+                    let mut last_size: Option<u64> = None;
+                    let mut stable_count = 0;
+                    let required_stable_checks = 2; // Need 2 consecutive same-size checks
+
+                    for _check in 0..max_checks {
+                        let current_size = fs::metadata(&full_path).map(|m| m.len()).ok();
+
+                        if current_size == last_size && current_size.is_some() {
+                            stable_count += 1;
+                            if stable_count >= required_stable_checks {
+                                // File is stable!
+                                break;
+                            }
+                        } else {
+                            stable_count = 0;
+                        }
+
+                        last_size = current_size;
+                        std::thread::sleep(std::time::Duration::from_millis(check_interval_ms));
+                    }
+
+                    // Increment counter and send status update
+                    let count = stabilized_counter.fetch_add(1, Ordering::SeqCst) + 1;
+                    let progress = 0.1 + (0.4 * (count as f64) / (total_files as f64));
+
+                    // Send status update for this file
+                    let _ = send_status(&status_file_clone, &config_clone, "Stabilizing",
+                        &format!("{} ({}/{})", filename, count, total_files), progress, None);
+
+                    // File is stable - return it
+                    let elapsed_ms = (stable_count as u64 + 1) * check_interval_ms;
+                    config_log(&config_clone, &format!("✅ {} stable after {}ms",
                         filename.green(),
-                        config_clone.stabilization_interval
+                        elapsed_ms
                     ));
                     Some((filename.clone(), remote_dir.clone()))
                 })

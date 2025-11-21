@@ -979,14 +979,14 @@ struct FTPServerBrowserView: View {
         
         Task {
             do {
+                // Use --list-only for simple directory names
                 let result = try await executeCurlCommand([
-                    "-v",
                     "-u", "\(username):\(password)",
                     "ftp://\(serverAddress):\(port)/",
-                    "--list-only",
                     "--connect-timeout", "10",
                     "--max-time", "30",
                     "--ftp-pasv",
+                    "--list-only",
                     "--silent"
                 ])
                 
@@ -1056,15 +1056,19 @@ struct FTPServerBrowserView: View {
                     isCreatingDirectory = false
 
                     if result.exitCode == 0 {
-                        // Success - add to list and select it
+                        // Success - add to list locally and select it immediately
+                        showCreateDirectory = false
+                        print("FTP Browser: Created directory \(newDirPath)")
+
+                        // Add the new directory to the list if not already there
                         if !serverDirectories.contains(newDirPath) {
                             serverDirectories.append(newDirPath)
                             serverDirectories.sort()
                         }
+
+                        // Select the newly created directory
                         selectedPath = newDirPath
-                        showCreateDirectory = false
                         newDirectoryName = ""
-                        print("FTP Browser: Created directory \(newDirPath)")
                     } else {
                         createDirectoryError = "Failed to create directory. It may already exist or you don't have permission."
                         print("FTP Browser: Failed to create directory \(newDirPath), exit code: \(result.exitCode)")

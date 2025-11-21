@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# FTP Downloader Notarized Build Script
+# FTP Uploader Notarized Build Script
 # Builds with 15-day expiration, no purchase UI
 # Output: build/notarized/
 
 set -e
 
-echo "🏗️  FTP Downloader Notarized Build"
+echo "🏗️  FTP Uploader Notarized Build"
 echo "===================================="
 echo "📅 15-day expiration from build date"
 echo "🚫 Purchase UI disabled"
@@ -14,7 +14,7 @@ echo ""
 
 # Check if we're in the right directory
 if [ ! -f "Package.swift" ]; then
-    echo "❌ Error: Package.swift not found. Please run this script from the FTPDownloader project root."
+    echo "❌ Error: Package.swift not found. Please run this script from the FTPUploader project root."
     exit 1
 fi
 
@@ -23,17 +23,17 @@ fi
 # Using the second Developer ID certificate as the first one has chain issues
 CERTIFICATE_NAME="5D81AE7E8E898B892D408AFF1479B2F5BA9A81D2"
 TEAM_ID="6X7BH7FLQ8"
-BUNDLE_ID="com.roningroupinc.FTPDownloader"
+BUNDLE_ID="com.roningroupinc.FTPUploader"
 APPLEID="aj@ajmast.com"
 APPLEIDPASS="zsbr-skjw-ippy-egwh"
 
 # Paths
 PROJECT_DIR="$(pwd)"
 BUILD_DIR="build/notarized"
-APP_NAME="FTPDownloader.app"
+APP_NAME="FTPUploader.app"
 APP_PATH="$BUILD_DIR/$APP_NAME"
-DMG_PATH="$BUILD_DIR/FTPDownloader.dmg"
-ZIP_PATH="$BUILD_DIR/FTPDownloader.zip"
+DMG_PATH="$BUILD_DIR/FTPUploader.dmg"
+ZIP_PATH="$BUILD_DIR/FTPUploader.zip"
 
 # Function to check if Rust binary needs rebuilding
 check_rust_library() {
@@ -127,8 +127,8 @@ mkdir -p "$APP_PATH/Contents/MacOS"
 mkdir -p "$APP_PATH/Contents/Resources"
 
 # Copy the Swift binary
-cp .build/release/FTPDownloader "$APP_PATH/Contents/MacOS/"
-chmod +x "$APP_PATH/Contents/MacOS/FTPDownloader"
+cp .build/release/FTPUploader "$APP_PATH/Contents/MacOS/"
+chmod +x "$APP_PATH/Contents/MacOS/FTPUploader"
 
 # Copy resources
 if [ -f "app-icon.icns" ]; then
@@ -160,11 +160,11 @@ cat > "$APP_PATH/Contents/Info.plist" << EOF
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>FTPDownloader</string>
+    <string>FTPUploader</string>
     <key>CFBundleIdentifier</key>
     <string>$BUNDLE_ID</string>
     <key>CFBundleName</key>
-    <string>FTP Downloader</string>
+    <string>FTP Uploader</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -196,16 +196,16 @@ echo "Using certificate: $CERTIFICATE_NAME"
 # Sign the main app binary with entitlements and identifier
 echo "📱 Signing main app binary (with embedded Rust FFI library)..."
 codesign --force --options runtime --sign "$CERTIFICATE_NAME" \
-    --entitlements "$PROJECT_DIR/Sources/FTPDownloader/FTPDownloader.entitlements" \
-    --identifier "com.roningroupinc.FTPDownloader" \
+    --entitlements "$PROJECT_DIR/Sources/FTPUploader/FTPUploader.entitlements" \
+    --identifier "com.roningroupinc.FTPUploader" \
     --timestamp \
-    "$APP_PATH/Contents/MacOS/FTPDownloader"
+    "$APP_PATH/Contents/MacOS/FTPUploader"
 echo "✅ Main binary signed"
 
 # Sign the app bundle (without --deep to preserve individual signatures)
 echo "📦 Signing app bundle..."
 codesign --force --options runtime --sign "$CERTIFICATE_NAME" \
-    --entitlements "$PROJECT_DIR/Sources/FTPDownloader/FTPDownloader.entitlements" \
+    --entitlements "$PROJECT_DIR/Sources/FTPUploader/FTPUploader.entitlements" \
     --timestamp \
     "$APP_PATH"
 echo "✅ App bundle signed"
@@ -248,7 +248,7 @@ if command -v create-dmg >/dev/null 2>&1; then
 
     # Use create-dmg with icon support
     create-dmg \
-        --volname "FTP Downloader" \
+        --volname "FTP Uploader" \
         --volicon "$PROJECT_DIR/app-icon.icns" \
         --window-pos 200 120 \
         --window-size 600 400 \
@@ -256,7 +256,7 @@ if command -v create-dmg >/dev/null 2>&1; then
         --icon "$APP_NAME" 175 190 \
         --hide-extension "$APP_NAME" \
         --app-drop-link 425 190 \
-        "FTPDownloader.dmg" \
+        "FTPUploader.dmg" \
         "$DMG_TEMP_DIR"
 
     # Recreate the Applications link after DMG creation
@@ -266,25 +266,25 @@ if command -v create-dmg >/dev/null 2>&1; then
         echo "✅ Professional DMG created with custom icon successfully!"
     else
         echo "⚠️  Failed to create DMG with create-dmg, falling back to basic approach"
-        hdiutil create -volname "FTP Downloader" -srcfolder "$DMG_TEMP_DIR" -ov -format UDZO "FTPDownloader.dmg"
+        hdiutil create -volname "FTP Uploader" -srcfolder "$DMG_TEMP_DIR" -ov -format UDZO "FTPUploader.dmg"
     fi
 else
     echo "ℹ️  create-dmg not found, using basic hdiutil approach..."
     # Create basic DMG
-    hdiutil create -volname "FTP Downloader" -srcfolder "$DMG_TEMP_DIR" -ov -format UDZO "FTPDownloader.dmg"
+    hdiutil create -volname "FTP Uploader" -srcfolder "$DMG_TEMP_DIR" -ov -format UDZO "FTPUploader.dmg"
 fi
 
 # Set the DMG file icon (the file itself, not just the volume)
 echo "🎨 Setting DMG file icon..."
 # Find the actual DMG file (in case create-dmg created a conflicted name)
-ACTUAL_DMG=$(ls -t FTPDownloader*.dmg 2>/dev/null | head -1)
+ACTUAL_DMG=$(ls -t FTPUploader*.dmg 2>/dev/null | head -1)
 if [ -n "$ACTUAL_DMG" ] && [ -f "$ACTUAL_DMG" ]; then
     # Move it to the expected name if different
-    if [ "$ACTUAL_DMG" != "FTPDownloader.dmg" ]; then
-        mv "$ACTUAL_DMG" "FTPDownloader.dmg"
+    if [ "$ACTUAL_DMG" != "FTPUploader.dmg" ]; then
+        mv "$ACTUAL_DMG" "FTPUploader.dmg"
     fi
     if command -v fileicon >/dev/null 2>&1; then
-        if fileicon set "FTPDownloader.dmg" "$PROJECT_DIR/app-icon.icns" 2>/dev/null; then
+        if fileicon set "FTPUploader.dmg" "$PROJECT_DIR/app-icon.icns" 2>/dev/null; then
             echo "✅ DMG file icon set successfully"
         else
             echo "⚠️  Failed to set DMG file icon"
@@ -311,7 +311,7 @@ codesign --force --sign "$CERTIFICATE_NAME" \
 # Create ZIP for notarization
 echo "📦 Creating ZIP for notarization..."
 cd "$BUILD_DIR"
-zip -r "FTPDownloader.zip" "$APP_NAME"
+zip -r "FTPUploader.zip" "$APP_NAME"
 cd -
 
 # Submit for notarization
