@@ -1807,10 +1807,8 @@ fn scan_directories_for_files(
             }
         }
 
-        // Phase 2: Write/update our entry in _monitored.json file to announce our presence
-        // This updates our timestamp (heartbeat) and adds/updates our entry
-        // Non-fatal if write fails - we'll continue monitoring
-        let _ = write_monitor_file(ftp, remote_dir, config, &files);
+        // Phase 2: Skip _monitored.json for uploader (was used for multi-client coordination in downloader)
+        // let _ = write_monitor_file(ftp, remote_dir, config, &files);
 
         // Filter files and collect with directory info
         let filtered: Vec<(String, String)> = files.iter()
