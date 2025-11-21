@@ -20,12 +20,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a hybrid Swift/Rust macOS application for automated FTP file downloading with intelligent stabilization monitoring.
+This is a hybrid Swift/Rust macOS application for automated FTP file uploading with intelligent stabilization monitoring.
 
 ### Core Components
 
 **Swift Frontend (SwiftUI App)**
-- `FTPDownloaderApp.swift`: Main SwiftUI app entry point
+- `FTPUploaderApp.swift`: Main SwiftUI app entry point
 - `ContentView.swift`: Primary UI with configuration management and file monitoring
 - `FTPConfigurationView.swift`: Configuration creation and editing interface
 - `FTPConfig.swift`: Data model for FTP server configurations
@@ -38,21 +38,22 @@ This is a hybrid Swift/Rust macOS application for automated FTP file downloading
 - Location: `RustFTP/src/main.rs`
 - Purpose: Concurrent FTP operations with advanced file stabilization
 - Communication: JSON-based IPC via files (`status.json`, `result.json`)
-- Features: Parallel downloads, file size monitoring, connection pooling
+- Features: Parallel uploads, file size monitoring, connection pooling
 
 ### Data Flow
 1. User creates FTP configuration in Swift UI
 2. Swift app writes config to JSON and spawns Rust process
 3. Rust engine performs FTP operations, writes status updates to JSON
 4. Swift app monitors JSON files and updates UI in real-time
-5. File processing: discovery → stabilization monitoring → parallel download → cleanup
+5. File processing: discovery → stabilization monitoring → parallel upload → move to FTPU-Sent
 
 ### Key Features
-- **File Stabilization**: Monitors file sizes until stable before downloading
-- **Concurrent Processing**: Parallel FTP operations for maximum throughput  
+- **File Stabilization**: Monitors local file sizes until stable before uploading
+- **Concurrent Processing**: Parallel FTP operations for maximum throughput
 - **Smart Retry Logic**: Exponential backoff for failed operations
 - **Real-time Monitoring**: Live status updates and progress tracking
 - **Secure Credential Storage**: macOS Keychain integration
+- **Move on Success**: Successfully uploaded files are moved to FTPU-Sent directory
 
 ### Build Process
 The build system creates a complete `.app` bundle containing:
@@ -65,7 +66,7 @@ The build system creates a complete `.app` bundle containing:
 - `Package.swift`: Swift Package Manager configuration with FileProvider dependency
 - `RustFTP/Cargo.toml`: Rust dependencies for FTP, async, and JSON processing
 - `ExportOptions.plist`: Code signing and distribution settings
-- `Sources/FTPDownloader/Info.plist`: macOS app bundle metadata
+- `Sources/FTPUploader/Info.plist`: macOS app bundle metadata
 
 ### Development Workflow
 1. Use `./build.sh` for complete builds during development
@@ -76,6 +77,6 @@ The build system creates a complete `.app` bundle containing:
 
 ### Architecture Considerations
 - **Hybrid Design**: Swift handles UI/UX, Rust handles performance-critical FTP operations
-- **Process Isolation**: Rust runs as separate process for stability and resource management  
+- **Process Isolation**: Rust runs as separate process for stability and resource management
 - **JSON Communication**: Simple, debuggable IPC between Swift and Rust components
 - **macOS Integration**: Native Swift UI with proper macOS app lifecycle and security

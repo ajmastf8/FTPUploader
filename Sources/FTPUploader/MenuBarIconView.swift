@@ -43,7 +43,7 @@ struct MenuBarIconView: View {
         }
 
         // Fallback to SF Symbol if custom icons not found
-        let fallback = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: "FTP Downloader") ?? NSImage()
+        let fallback = NSImage(systemSymbolName: "arrow.up.circle.fill", accessibilityDescription: "FTP Uploader") ?? NSImage()
         fallback.size = NSSize(width: 18, height: 18)
         return fallback
     }

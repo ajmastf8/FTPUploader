@@ -17,14 +17,13 @@ struct FTPConfig {
     pub port: u16,
     pub username: String,
     pub password: String,
-    pub remote_directories: Vec<String>,
-    pub local_download_path: String,
+    pub remote_destination: String, // Remote FTP directory to upload to
+    pub local_source_path: String, // Local directory to monitor for files to upload
     pub respect_file_paths: bool,
-    pub download_mode: String,
     pub sync_interval: f64, // How often to run sync cycles (milliseconds from Swift, converted to seconds)
     pub stabilization_interval: u64, // How long to wait for file stabilization (milliseconds from Swift, converted to seconds)
-    pub download_aggressiveness: u32, // Number of parallel connections (from Swift enum)
-    pub auto_tune_aggressiveness: bool, // Enable/disable auto-tuning of download aggressiveness
+    pub upload_aggressiveness: u32, // Number of parallel connections (from Swift enum)
+    pub auto_tune_aggressiveness: bool, // Enable/disable auto-tuning of upload aggressiveness
     pub config_id: String, // Changed from u32 to String to use stable UUID instead of hash
     pub config_name: String,
     pub session_id: String, // Added: Session ID from Swift
@@ -38,8 +37,8 @@ struct FTPStatus {
     pub progress: f64,
     pub timestamp: u64,
     pub file_size: Option<u64>, // bytes
-    pub download_speed_mbps: Option<f64>, // MB/s for completed downloads
-    pub download_time_secs: Option<f64>, // seconds for completed downloads
+    pub upload_speed_mbps: Option<f64>, // MB/s for completed uploads
+    pub upload_time_secs: Option<f64>, // seconds for completed uploads
 }
 
 #[derive(Debug, Serialize)]
@@ -59,10 +58,10 @@ struct FTPSessionSummary {
     pub end_time: u64,
     pub total_duration_seconds: f64,
     pub files_processed: usize,
-    pub total_bytes_downloaded: u64,
-    pub average_download_speed_mbps: f64,
-    pub peak_download_speed_mbps: f64,
-    pub download_speeds: Vec<f64>, // Individual file speeds for analysis
+    pub total_bytes_uploaded: u64,
+    pub average_upload_speed_mbps: f64,
+    pub peak_upload_speed_mbps: f64,
+    pub upload_speeds: Vec<f64>, // Individual file speeds for analysis
     pub success: bool,
     pub error_message: Option<String>,
 }
@@ -98,7 +97,7 @@ struct SessionState {
     start_time: Instant,
     total_files: usize,
     total_bytes: usize,
-    total_download_time: f64, // seconds
+    total_upload_time: f64, // seconds
     file_speeds: Vec<f64>, // MB/s for each file
     current_operation: String,
     errors: Vec<String>,
@@ -110,7 +109,7 @@ impl SessionState {
             start_time: Instant::now(),
             total_files: 0,
             total_bytes: 0,
-            total_download_time: 0.0,
+            total_upload_time: 0.0,
             file_speeds: Vec::new(),
             current_operation: "Starting".to_string(),
             errors: Vec::new(),
@@ -121,14 +120,14 @@ impl SessionState {
         self.current_operation = operation.to_string();
     }
 
-    fn add_file_download(&mut self, bytes: usize, download_time: f64) {
+    fn add_file_upload(&mut self, bytes: usize, upload_time: f64) {
         self.total_files += 1;
         self.total_bytes += bytes;
-        self.total_download_time += download_time;
-        
+        self.total_upload_time += upload_time;
+
         // Calculate speed for this file
-        if download_time > 0.0 {
-            let speed_mbps = (bytes as f64 / 1024.0 / 1024.0) / download_time;
+        if upload_time > 0.0 {
+            let speed_mbps = (bytes as f64 / 1024.0 / 1024.0) / upload_time;
             self.file_speeds.push(speed_mbps);
         }
     }
@@ -442,7 +441,7 @@ fn detect_monitor_conflicts(monitor_file: &MonitorFile, current_mode: &str, curr
 
         return Some((
             "critical".to_string(),
-            format!("Multiple FTPDownloaders detected in FTP directory '{}':\n\n{}\n\nCONFLICT: Multiple DELETE-mode instances will cause unpredictable file deletion!",
+            format!("Multiple FTPUploaders detected in FTP directory '{}':\n\n{}\n\nCONFLICT: Multiple DELETE-mode instances will cause unpredictable file deletion!",
                 ftp_directory, monitor_list.join("\n"))
         ));
     }
@@ -453,7 +452,7 @@ fn detect_monitor_conflicts(monitor_file: &MonitorFile, current_mode: &str, curr
         println!("🟡 MONITOR CONFLICT: Warning - delete monitor exists, current is keep");
         return Some((
             "warning".to_string(),
-            format!("Another FTPDownloader detected in FTP directory '{}':\n\n  • {} ({}) - DELETE mode\n  • This instance - KEEP mode\n\nWARNING: The DELETE-mode instance may remove files before you download them!",
+            format!("Another FTPUploader detected in FTP directory '{}':\n\n  • {} ({}) - DELETE mode\n  • This instance - KEEP mode\n\nWARNING: The DELETE-mode instance may remove files before you upload them!",
                 ftp_directory, monitor.profile_name, monitor.hostname)
         ));
     }
@@ -468,7 +467,7 @@ fn detect_monitor_conflicts(monitor_file: &MonitorFile, current_mode: &str, curr
 
         return Some((
             "warning".to_string(),
-            format!("Other FTPDownloaders detected in FTP directory '{}':\n\n{}\n  • This instance - DELETE mode\n\nWARNING: Your DELETE mode will affect their downloads!",
+            format!("Other FTPUploaders detected in FTP directory '{}':\n\n{}\n  • This instance - DELETE mode\n\nWARNING: Your DELETE mode will affect their downloads!",
                 ftp_directory, monitor_list.join("\n"))
         ));
     }
@@ -479,7 +478,7 @@ fn detect_monitor_conflicts(monitor_file: &MonitorFile, current_mode: &str, curr
         println!("🔵 MONITOR CONFLICT: Info - multiple keep monitors (safe)");
         return Some((
             "info".to_string(),
-            format!("Multiple FTPDownloaders detected in FTP directory '{}' in KEEP mode. This is safe but redundant - all instances will download the same files.", ftp_directory)
+            format!("Multiple FTPUploaders detected in FTP directory '{}' in KEEP mode. This is safe but redundant - all instances will upload the same files.", ftp_directory)
         ));
     }
 
@@ -580,7 +579,7 @@ fn get_local_ip() -> String {
 // Write or update _monitored.json file on the FTP server
 // Phase 2: Announce our presence by writing our entry to the monitor file
 // This function:
-// 1. Downloads existing _monitored.json (if exists)
+// 1. Uploads existing _monitored.json (if exists)
 // 2. Parses it and filters out stale entries (>5 minutes old)
 // 3. Updates or adds our entry with current timestamp
 // 4. Uploads the updated file back to the server
@@ -601,7 +600,7 @@ fn write_monitor_file(
     let current_time = Utc::now();
 
     println!("📝 MONITOR WRITE: hostname={}, ip={}, profile={}, mode={}",
-        hostname, ip, config.config_name, config.download_mode);
+        hostname, ip, config.config_name, "upload");
 
     // Step 1: Read existing monitor file (if it exists)
     let mut monitor_file = if let Some(existing) = read_monitor_file(ftp, remote_dir, file_listing) {
@@ -641,7 +640,7 @@ fn write_monitor_file(
         ip: ip.clone(),
         hostname: hostname.clone(),
         profile_name: config.config_name.clone(),
-        mode: config.download_mode.clone(),
+        mode: "upload".to_string(),
         last_seen: current_time.to_rfc3339(),
     };
 
@@ -824,7 +823,7 @@ fn cleanup_monitor_file(
 fn cleanup_all_monitor_files(
     config: &FTPConfig
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🧹 CLEANUP ALL: Starting cleanup for {} directories", config.remote_directories.len());
+    println!("🧹 CLEANUP ALL: Starting cleanup for {} directories", config.remote_destination.len());
 
     // Create new FTP connection for cleanup
     let server_addr = format!("{}:{}", config.server_address, config.port);
@@ -842,33 +841,32 @@ fn cleanup_all_monitor_files(
         return Err(format!("FTP login failed: {}", e).into());
     }
 
-    // Cleanup each directory
-    for remote_dir in &config.remote_directories {
-        println!("🧹 CLEANUP ALL: Processing directory {}", remote_dir);
+    // Cleanup the remote destination directory
+    let remote_dir = &config.remote_destination;
+    println!("🧹 CLEANUP ALL: Processing directory {}", remote_dir);
 
-        // Reset to root and change to directory
-        if let Err(e) = ftp.cwd("/") {
-            println!("⚠️  CLEANUP ALL: Failed to reset to root: {}", e);
-            continue;
-        }
-
-        if let Err(e) = ftp.cwd(remote_dir) {
-            println!("⚠️  CLEANUP ALL: Failed to change to directory {}: {}", remote_dir, e);
-            continue;
-        }
-
-        // Get directory listing
-        let files = match ftp.list(Some(remote_dir)) {
-            Ok(files) => files,
-            Err(e) => {
-                println!("⚠️  CLEANUP ALL: Failed to list directory {}: {}", remote_dir, e);
-                continue;
-            }
-        };
-
-        // Cleanup monitor file in this directory
-        let _ = cleanup_monitor_file(&mut ftp, remote_dir, config, &files);
+    // Reset to root and change to directory
+    if let Err(e) = ftp.cwd("/") {
+        println!("⚠️  CLEANUP ALL: Failed to reset to root: {}", e);
+        return Ok(());
     }
+
+    if let Err(e) = ftp.cwd(remote_dir) {
+        println!("⚠️  CLEANUP ALL: Failed to change to directory {}: {}", remote_dir, e);
+        return Ok(());
+    }
+
+    // Get directory listing
+    let files = match ftp.list(Some(remote_dir)) {
+        Ok(files) => files,
+        Err(e) => {
+            println!("⚠️  CLEANUP ALL: Failed to list directory {}: {}", remote_dir, e);
+            return Ok(());
+        }
+    };
+
+    // Cleanup monitor file in this directory
+    let _ = cleanup_monitor_file(&mut ftp, remote_dir, config, &files);
 
     println!("✅ CLEANUP ALL: Finished cleaning up all directories");
     Ok(())
@@ -1203,7 +1201,7 @@ pub fn run_ftp_with_args(
     let hash_file = &args[5];
 
     println!("{}", "=".repeat(80).blue());
-    println!("🚀 {} - Production FTP Downloader v1.0.0", "FTP".bold().green());
+    println!("🚀 {} - Production FTP Uploader v1.0.0", "FTP".bold().green());
     println!("{}", "=".repeat(80).blue());
     println!("📁 Config file: {}", config_file.cyan());
     println!("📊 Status file: {}", status_file.cyan());
@@ -1246,11 +1244,10 @@ pub fn run_ftp_with_args(
         }
     };
     
-    // Log the download mode and sync settings
-    config_log(&config, &format!("🔧 Download Mode: '{}'", config.download_mode.cyan()));
+    // Log the sync settings
     config_log(&config, &format!("🔧 Sync Interval: {}s (how often to run sync cycles)", config.sync_interval.to_string().green()));
     config_log(&config, &format!("🔧 Stabilization Interval: {}s (file stabilization wait)", config.stabilization_interval.to_string().yellow()));
-    config_log(&config, &format!("🔧 Download Aggressiveness: {} parallel connections", config.download_aggressiveness.to_string().cyan()));
+    config_log(&config, &format!("🔧 Upload Aggressiveness: {} parallel connections", config.upload_aggressiveness.to_string().cyan()));
     config_log(&config, &format!("🔧 Auto-tune Aggressiveness: {}", if config.auto_tune_aggressiveness { "enabled".green() } else { "disabled".red() }));
 
     // Send sync interval as notification so it appears in UI
@@ -1284,9 +1281,9 @@ pub fn run_ftp_with_args(
     let data_dir_str = std::env::var("FTP_DATA_DIR").unwrap_or_else(|_| {
         // Fallback: try to construct Application Support path
         if let Ok(home) = std::env::var("HOME") {
-            format!("{}/Library/Application Support/FTPDownloader", home)
+            format!("{}/Library/Application Support/FTPUploader", home)
         } else {
-            "/tmp/FTPDownloader".to_string()
+            "/tmp/FTPUploader".to_string()
         }
     });
     let data_dir = PathBuf::from(data_dir_str);
@@ -1540,20 +1537,27 @@ fn process_single_iteration(
     // Send structured notification
     send_notification(&config, "info", &format!("Connected to {}", config.server_address), None, None)?;
 
-    // Collect all files from all directories
-    let all_files = scan_directories_for_files(&mut ftp, &config, status_file, shutdown_file, shutdown_flag, iteration)?;
-    
-    config_log(&config, &format!("🔍 DEBUG: File scan found {} files total (mode: '{}')", all_files.len(), config.download_mode.cyan()));
-    for (filename, remote_dir) in &all_files {
-        config_log(&config, &format!("  📄 Found file: {} in {}", filename.cyan(), remote_dir.yellow()));
+    // Scan local directory for files to upload
+    let local_files = scan_local_directory_for_files(&config, status_file, shutdown_file, shutdown_flag, iteration)?;
+
+    config_log(&config, &format!("🔍 DEBUG: Local scan found {} files to upload", local_files.len()));
+    // Only show first 10 files to avoid log flooding
+    for (i, (relative_path, _full_path, size)) in local_files.iter().enumerate() {
+        if i < 10 {
+            config_log(&config, &format!("  📄 Found file: {} ({} bytes)", relative_path.cyan(), size));
+        } else if i == 10 {
+            config_log(&config, &format!("  ... and {} more files", local_files.len() - 10));
+            break;
+        }
     }
-    
-    // Debug hash tracking behavior based on mode
-    if config.download_mode == "keep" {
-        config_log(&config, &format!("🔍 DEBUG: KEEP mode - will check hashes to avoid re-downloading"));
-    } else {
-        config_log(&config, &format!("🔍 DEBUG: DELETE mode - no hash tracking, will download all files"));
-    }
+
+    // Convert to format expected by process_files: (filename, local_path)
+    // For uploads, we'll use the relative path as the remote filename
+    let all_files: Vec<(String, String)> = local_files.iter()
+        .map(|(rel_path, full_path, _)| (rel_path.clone(), full_path.to_string_lossy().to_string()))
+        .collect();
+
+    config_log(&config, &format!("🔍 DEBUG: Files will be moved to FTPU-Sent after successful upload"));
     
     if all_files.is_empty() {
         config_log(&config, &format!("{} No files found to process, will wait for interval and retry", "⚠️".yellow()));
@@ -1575,18 +1579,24 @@ fn process_single_iteration(
     }
     
     // Process files if any were found
+    config_log(&config, &format!("========================================"));
+    config_log(&config, &format!("{} STARTING UPLOAD PHASE - {} files to process", "🚀🚀🚀".green(), all_files.len()));
+    config_log(&config, &format!("========================================"));
+
     // Check if we should reduce parallel connections due to server limits
     let max_connections = if connection_manager.should_reduce_connections() {
-        let reduced = (config.download_aggressiveness as usize / 4).max(1); // Reduce to 1/4 of configured aggressiveness
-        config_log(&config, &format!("{} Server limit detected - reducing from {} to {} parallel connections", 
-            "🔧".yellow(), config.download_aggressiveness, reduced));
+        let reduced = (config.upload_aggressiveness as usize / 4).max(1); // Reduce to 1/4 of configured aggressiveness
+        config_log(&config, &format!("{} Server limit detected - reducing from {} to {} parallel connections",
+            "🔧".yellow(), config.upload_aggressiveness, reduced));
         reduced
     } else {
         // TODO: Implement auto-tuning logic using config.auto_tune_aggressiveness
         // For now, just use the configured aggressiveness
-        config.download_aggressiveness as usize // Use configured aggressiveness
+        config.upload_aggressiveness as usize // Use configured aggressiveness
     };
-    
+
+    config_log(&config, &format!("{} Using {} parallel connections for upload", "🔧".blue(), max_connections));
+
     let files_processed = process_files(
         &mut ftp, 
         &all_files, 
@@ -1610,7 +1620,105 @@ fn process_single_iteration(
     Ok(())
 }
 
-// Function to scan directories for files
+// Function to scan local directory for files to upload
+fn scan_local_directory_for_files(
+    config: &FTPConfig,
+    status_file: &str,
+    shutdown_file: &str,
+    shutdown_flag: &Arc<AtomicBool>,
+    _iteration: usize
+) -> Result<Vec<(String, PathBuf, u64)>, Box<dyn std::error::Error>> {
+
+    config_log(&config, &format!("{} Scanning local directory for files to upload...", "🔍".blue()));
+    let mut all_files: Vec<(String, PathBuf, u64)> = Vec::new();
+
+    let local_dir = PathBuf::from(&config.local_source_path);
+
+    // Check for shutdown
+    if shutdown_flag.load(Ordering::SeqCst) || fs::metadata(shutdown_file).is_ok() {
+        config_log(&config, &format!("{} Shutdown during directory scanning, exiting gracefully", "🛑".red()));
+        return Ok(all_files);
+    }
+
+    let progress = 0.3;
+    config_log(&config, &format!("{} Scanning local directory: {}", "📁".blue(), config.local_source_path.cyan()));
+    send_status(status_file, &config, "Scanning", &config.local_source_path, progress, None)?;
+
+    // Send structured notification
+    send_notification(&config, "info", &format!("Scanning {}", config.local_source_path), None, None)?;
+
+    // Check if local directory exists
+    if !local_dir.exists() {
+        warn!("Local directory not found: {}", config.local_source_path);
+        config_log(&config, &format!("{} Local directory not found: {}", "⚠️".yellow(), config.local_source_path.red()));
+        send_notification(&config, "warning", &format!("Directory not found: {}", config.local_source_path), None, None)?;
+        return Ok(all_files);
+    }
+
+    // Recursively scan local directory
+    fn scan_dir_recursive(dir: &PathBuf, base_dir: &PathBuf, files: &mut Vec<(String, PathBuf, u64)>, config: &FTPConfig) -> std::io::Result<()> {
+        config_log(&config, &format!("   📂 Scanning: {}", dir.display()));
+
+        if let Ok(entries) = fs::read_dir(dir) {
+            let mut file_count = 0;
+            let mut dir_count = 0;
+            let mut skipped_count = 0;
+
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let filename = path.file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default();
+
+                // Skip hidden files and FTPU-Sent directory
+                if filename.starts_with('.') || filename == "FTPU-Sent" {
+                    skipped_count += 1;
+                    if filename == "FTPU-Sent" {
+                        config_log(&config, &format!("   ⏭️ Skipping FTPU-Sent directory"));
+                    }
+                    continue;
+                }
+
+                if path.is_dir() {
+                    dir_count += 1;
+                    // Recursively scan subdirectories
+                    scan_dir_recursive(&path, base_dir, files, config)?;
+                } else if path.is_file() {
+                    // Get file size
+                    if let Ok(metadata) = fs::metadata(&path) {
+                        let size = metadata.len();
+
+                        // Calculate relative path from base directory
+                        let relative_path = path.strip_prefix(base_dir)
+                            .map(|p| p.to_string_lossy().to_string())
+                            .unwrap_or_else(|_| filename.clone());
+
+                        files.push((relative_path, path.clone(), size));
+                        file_count += 1;
+                    }
+                }
+            }
+
+            if file_count > 0 || dir_count > 0 {
+                config_log(&config, &format!("   📊 In {}: {} files, {} subdirs, {} skipped",
+                    dir.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "root".to_string()),
+                    file_count, dir_count, skipped_count));
+            }
+        } else {
+            config_log(&config, &format!("   ⚠️ Could not read directory: {}", dir.display()));
+        }
+        Ok(())
+    }
+
+    scan_dir_recursive(&local_dir, &local_dir, &mut all_files, config)?;
+
+    config_log(&config, &format!("{} Found {} files to upload", "📊".blue(), all_files.len()));
+    send_notification(&config, "info", &format!("Found {} files", all_files.len()), None, None)?;
+
+    Ok(all_files)
+}
+
+/* Legacy download function - commented out for upload conversion
 fn scan_directories_for_files(
     ftp: &mut ftp::FtpStream,
     config: &FTPConfig,
@@ -1619,30 +1727,32 @@ fn scan_directories_for_files(
     shutdown_flag: &Arc<AtomicBool>,
     iteration: usize
 ) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
-    
+
     config_log(&config, &format!("{} Scanning directories for files...", "🔍".blue()));
     let mut all_files = Vec::new();
-    
-    for (dir_index, remote_dir) in config.remote_directories.iter().enumerate() {
-        // Check for shutdown during directory scanning
-        if shutdown_flag.load(Ordering::SeqCst) {
-            if fs::metadata(shutdown_file).is_ok() {
-                config_log(&config, &format!("{} Config {} stopped during directory scanning, skipping this directory", "⏸️".yellow(), config.config_name));
-                continue; // Skip this directory, don't exit
-            } else {
-                config_log(&config, &format!("{} Shutdown during directory scanning, exiting gracefully", "🛑".red()));
-                return Ok(all_files); // Return what we have so far
-            }
+
+    // For upload mode, we scan local directory instead
+    // This legacy function is kept for reference but should not be called
+    let remote_dir = &config.remote_destination;
+
+    // Check for shutdown during directory scanning
+    if shutdown_flag.load(Ordering::SeqCst) {
+        if fs::metadata(shutdown_file).is_ok() {
+            config_log(&config, &format!("{} Config {} stopped during directory scanning, skipping this directory", "⏸️".yellow(), config.config_name));
+        } else {
+            config_log(&config, &format!("{} Shutdown during directory scanning, exiting gracefully", "🛑".red()));
+            return Ok(all_files); // Return what we have so far
         }
-        
-        // CRITICAL FIX: Reset to root directory before each scan to prevent CWD drift
-        if let Err(e) = ftp.cwd("/") {
-            config_log(&config, &format!("⚠️ Warning: Failed to reset to root directory: {}", e));
-        }
-        
-        let progress = 0.2 + (0.3 * (dir_index as f64) / (config.remote_directories.len() as f64));
-        config_log(&config, &format!("{} Scanning directory: {} (reset to root first)", "📁".blue(), remote_dir.cyan()));
-        send_status(status_file, &config, "Scanning", remote_dir, progress, None)?;
+    }
+
+    // Change to remote destination directory
+    if let Err(e) = ftp.cwd(&config.remote_destination) {
+        config_log(&config, &format!("⚠️ Warning: Failed to change to remote directory: {}", e));
+    }
+
+    let progress = 0.3;
+    config_log(&config, &format!("{} Scanning directory: {}", "📁".blue(), remote_dir.cyan()));
+    send_status(status_file, &config, "Scanning", remote_dir, progress, None)?;
 
         // Send structured notification
         send_notification(&config, "info", &format!("Scanning {}", remote_dir), None, None)?;
@@ -1678,11 +1788,11 @@ fn scan_directories_for_files(
                 let our_hostname = get_hostname();
                 let our_profile = &config.config_name;
 
-                println!("🔍 CALLING detect_monitor_conflicts with download_mode='{}' hostname='{}' profile='{}'",
-                    config.download_mode, our_hostname, our_profile);
+                println!("🔍 CALLING detect_monitor_conflicts with upload_mode='{}' hostname='{}' profile='{}'",
+                    "upload", our_hostname, our_profile);
 
-                // Detect conflicts based on current download mode (excluding ourselves)
-                if let Some((conflict_level, message)) = detect_monitor_conflicts(&monitor_file, &config.download_mode, &our_hostname, our_profile, remote_dir) {
+                // Detect conflicts based on current upload mode (excluding ourselves)
+                if let Some((conflict_level, message)) = detect_monitor_conflicts(&monitor_file, &"upload", &our_hostname, our_profile, remote_dir) {
                     config_log(&config, &message);
 
                     // Send notification to Swift UI as "monitor_warning" type
@@ -1839,6 +1949,7 @@ fn scan_directories_for_files(
 
     Ok(all_files)
 }
+*/ // End of commented-out legacy scan_directories_for_files
 
 // Function to process files
 fn process_files(
@@ -1861,7 +1972,7 @@ fn process_files(
     let files_to_process = all_files.to_vec();
 
     // Load existing hashes for keep mode (used by worker threads later)
-    let existing_hashes = if config.download_mode == "keep" {
+    let existing_hashes = if "upload" == "keep" {
         config_log(&config, &format!("🔍 Keep mode enabled - checking existing file hashes..."));
 
         // Try database first, fallback to hash files
@@ -1930,15 +2041,15 @@ fn process_files(
                     let status = FTPStatus {
                         config_id: config_arc.config_id.clone(),
                         stage: "Processing".to_string(), // Don't overwrite main status
-                        filename: "Files downloading...".to_string(),
+                        filename: "Files uploading...".to_string(),
                         progress: status_update.progress,
                         timestamp: std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
                             .unwrap_or_default()
                             .as_secs(),
                         file_size: status_update.file_size,
-                        download_speed_mbps: None,
-                        download_time_secs: None,
+                        upload_speed_mbps: None,
+                        upload_time_secs: None,
                     };
                     
                     if let Ok(status_json) = serde_json::to_string(&status) {
@@ -1956,8 +2067,8 @@ fn process_files(
                             .unwrap_or_default()
                             .as_secs(),
                         file_size: status_update.file_size,
-                        download_speed_mbps: None, // Will be filled by specific status updates
-                        download_time_secs: None,  // Will be filled by specific status updates
+                        upload_speed_mbps: None, // Will be filled by specific status updates
+                        upload_time_secs: None,  // Will be filled by specific status updates
                     };
                     
                     if let Ok(status_json) = serde_json::to_string(&status) {
@@ -1979,7 +2090,7 @@ fn process_files(
     config_log(&config, &format!("{}", "=".repeat(80).blue()));
 
     // PHASE 1: Parallel stabilization monitoring (if enabled)
-    let files_to_download = if config.stabilization_interval > 0 {
+    let files_to_upload = if config.stabilization_interval > 0 {
         config_log(&config, &format!("{} Phase 1: Monitoring {} files for stability in PARALLEL ({}s interval)...",
             "🔍".cyan(),
             files_to_process.len().to_string().green(),
@@ -2019,12 +2130,12 @@ fn process_files(
         ));
 
         if stabilized_count == 0 {
-            config_log(&config, &format!("{} No stable files to download, ending session", "⚠️".yellow()));
+            config_log(&config, &format!("{} No stable files to upload, ending session", "⚠️".yellow()));
             return Ok(0);
         }
 
         config_log(&config, &format!("{}", "=".repeat(80).blue()));
-        config_log(&config, &format!("{} Phase 2: Parallel downloading {} stable files with {} worker threads...",
+        config_log(&config, &format!("{} Phase 2: Parallel uploading {} stable files with {} worker threads...",
             "⬇️".blue(),
             stabilized_count.to_string().green(),
             max_parallel_connections.to_string().yellow()
@@ -2032,8 +2143,8 @@ fn process_files(
 
         stable_files
     } else {
-        // No stabilization - download all discovered files immediately
-        config_log(&config, &format!("{} Parallel downloading {} files with {} worker threads (no stabilization)...",
+        // No stabilization - upload all discovered files immediately
+        config_log(&config, &format!("{} Parallel uploading {} files with {} worker threads (no stabilization)...",
             "⬇️".blue(),
             files_to_process.len().to_string().green(),
             max_parallel_connections.to_string().yellow()
@@ -2056,7 +2167,7 @@ fn process_files(
 
     // Use custom thread pool with exactly max_parallel_connections threads
     let results: Vec<Result<(), String>> = pool.install(|| {
-        files_to_download
+        files_to_upload
             .par_iter()
             .with_max_len(1) // Each file gets its own task
             .enumerate()
@@ -2071,7 +2182,7 @@ fn process_files(
         }
         
         let thread_id = file_index as u64;
-        let file_progress = 0.5 + (0.4 * (file_index as f64) / (files_to_download.len() as f64));
+        let file_progress = 0.5 + (0.4 * (file_index as f64) / (files_to_upload.len() as f64));
         let existing_hashes = existing_hashes_clone.clone();
         let session_file = session_file.to_string(); // Convert to String for parallel processing
         let _status_sender_local = status_sender_clone.clone();
@@ -2080,7 +2191,7 @@ fn process_files(
         
         // DEBUG: Log file processing start
         config_log(&config, &format!("🔍 DEBUG: [Thread-{}] Starting to process {} ({}/{})",
-            thread_id, filename.cyan(), (file_index + 1), files_to_download.len()));
+            thread_id, filename.cyan(), (file_index + 1), files_to_upload.len()));
         
         // Send status update
         let _ = status_tx.send(StatusUpdate {
@@ -2197,20 +2308,22 @@ fn process_files(
         config_log(&config, &format!("✅ DEBUG: [Thread-{}] FTP login successful for {}", thread_id, filename.green()));
 
         // DEBUG: Log directory change attempt
-        config_log(&config, &format!("📁 DEBUG: [Thread-{}] Attempting to change to directory '{}' for {}", 
-            thread_id, remote_dir.cyan(), filename.cyan()));
-        
-        // Change to directory
-        if let Err(e) = ftp.cwd(remote_dir) {
-            let error_msg = format!("Failed to change to directory: {}", remote_dir);
+        // Note: remote_dir contains the LOCAL file path, we use config.remote_destination for FTP directory
+        let ftp_remote_dir = &config.remote_destination;
+        config_log(&config, &format!("📁 DEBUG: [Thread-{}] Attempting to change to directory '{}' for {}",
+            thread_id, ftp_remote_dir.cyan(), filename.cyan()));
+
+        // Change to directory on FTP server (use remote_destination, not local path)
+        if let Err(e) = ftp.cwd(ftp_remote_dir) {
+            let error_msg = format!("Failed to change to directory: {}", ftp_remote_dir);
             error!("[Thread-{}] {}", thread_id, error_msg);
-            config_log(&config, &format!("❌ DEBUG: [Thread-{}] Server rejected CWD to '{}': {}", 
-                thread_id, remote_dir.red(), e));
+            config_log(&config, &format!("❌ DEBUG: [Thread-{}] Server rejected CWD to '{}': {}",
+                thread_id, ftp_remote_dir.red(), e));
             return Err(error_msg);
         }
-        
-        config_log(&config, &format!("✅ DEBUG: [Thread-{}] Successfully changed to directory '{}'", 
-            thread_id, remote_dir.green()));
+
+        config_log(&config, &format!("✅ DEBUG: [Thread-{}] Successfully changed to directory '{}'",
+            thread_id, ftp_remote_dir.green()));
 
         // Check file size for stabilization
         // CRITICAL FIX: Set to BINARY mode before SIZE command (some servers reject SIZE in ASCII mode)
@@ -2243,14 +2356,14 @@ fn process_files(
             },
             Err(e) => {
                 // SIZE command not supported or failed - continue anyway without stabilization
-                config_log(&config, &format!("⚠️  [Thread-{}] SIZE command failed for {} ({}), will download without size check",
+                config_log(&config, &format!("⚠️  [Thread-{}] SIZE command failed for {} ({}), will upload without size check",
                     thread_id, filename.yellow(), e));
                 None
             },
         };
 
             // Hash checking for keep mode - do this BEFORE stabilization
-        if config.download_mode == "keep" {
+        if "upload" == "keep" {
             let key = format!("{}|{}", remote_dir, filename);
             // Get file modification time for hash computation
             let mod_time = match get_file_mod_time(&mut ftp, filename) {
@@ -2273,7 +2386,7 @@ fn process_files(
                 config_log(&config, &format!("🔍 HASH DEBUG [Thread-{}]: Hash match: {}", thread_id, *existing_hash == current_hash));
                 
                 if *existing_hash == current_hash {
-                    config_log(&config, &format!("{} [Thread-{}] {} unchanged, skipping download", 
+                    config_log(&config, &format!("{} [Thread-{}] {} unchanged, skipping upload", 
                         "⏭️".yellow(), 
                         thread_id.to_string().cyan(), 
                         filename.green()
@@ -2293,7 +2406,7 @@ fn process_files(
                     // No need to quit here - will be handled at end of retry loop
                     return Ok(()); // Skip this file
                 } else {
-                    config_log(&config, &format!("{} [Thread-{}] {} hash changed, will download", 
+                    config_log(&config, &format!("{} [Thread-{}] {} hash changed, will upload", 
                         "🔄".blue(), 
                         thread_id.to_string().cyan(), 
                         filename.yellow()
@@ -2304,22 +2417,25 @@ fn process_files(
             }
         }
 
-        // Stabilization is now handled in Phase 1 before downloading
-        // All files in Phase 2 are already stable, so we can proceed directly to download
+        // Stabilization is now handled in Phase 1 before uploading
+        // All files in Phase 2 are already stable, so we can proceed directly to upload
 
         // DEBUG: Log before download attempt
-        config_log(&config, &format!("⬇️ DEBUG: [Thread-{}] Starting download of {} ({:?} bytes) from '{}'",
-            thread_id, filename.cyan(), initial_size, remote_dir.cyan()));
+        // For uploads: filename is relative path, remote_dir is full local path
+        let local_path = PathBuf::from(remote_dir); // remote_dir contains the full local path
+        let relative_path = filename; // filename contains the relative path
 
-        // Download file with proper mode detection
-        let download_start = std::time::Instant::now();
-        let size_hint = initial_size.unwrap_or(0) as u64;
-        let download_result = download_file(&mut ftp, filename, remote_dir, &config.local_download_path, config.respect_file_paths, size_hint);
+        config_log(&config, &format!("⬆️ DEBUG: [Thread-{}] Starting upload of {} ({:?} bytes) to '{}'",
+            thread_id, relative_path.cyan(), initial_size, config.remote_destination.cyan()));
+
+        // Upload file to FTP server
+        let upload_start = std::time::Instant::now();
+        let upload_result = upload_file(&mut ftp, relative_path, &local_path, &config.remote_destination, config.respect_file_paths);
         
-        match download_result {
+        match upload_result {
             Ok(_local_path) => {
                 let _ = status_tx.send(StatusUpdate {
-                    stage: "Downloaded".to_string(),
+                    stage: "Uploaded".to_string(),
                     filename: filename.clone(),
                     progress: file_progress + 0.15,
                     thread_id,
@@ -2335,7 +2451,7 @@ fn process_files(
                 });
 
                 // Send structured notification for successful download (no progress bar)
-                let _ = send_notification(&config, "success", &format!("Downloaded {}", filename), Some(filename), None);
+                let _ = send_notification(&config, "success", &format!("Uploaded {}", filename), Some(filename), None);
                 
                 // Log download completion
                 config_log(&config, &format!("{} [Thread-{}] {} downloaded successfully", 
@@ -2345,16 +2461,16 @@ fn process_files(
                 ));
                 
                 // Update session state with download time and file size
-                let download_time = download_start.elapsed().as_secs_f64();
+                let upload_time = upload_start.elapsed().as_secs_f64();
                 if let Ok(mut state) = session_state_clone.lock() {
-                    state.add_file_download(initial_size.unwrap_or(0) as usize, download_time);
+                    state.add_file_upload(initial_size.unwrap_or(0) as usize, upload_time);
                     
                     // Debug logging for session stats
                     config_log(&config, &format!("📊 [Thread-{}] Session stats updated: {} files, {} bytes, {:.2}s, {:.2} MB/s avg", 
                         thread_id.to_string().cyan(),
                         state.total_files.to_string().green(),
                         state.total_bytes.to_string().blue(),
-                        state.total_download_time.to_string().yellow(),
+                        state.total_upload_time.to_string().yellow(),
                         state.get_average_speed_mbps().to_string().cyan()
                     ));
                     
@@ -2370,97 +2486,58 @@ fn process_files(
                     }
                 }
                 
-                // Handle file based on download mode
-                if config.download_mode == "keep" {
-                    // Save hash for keep mode
-                    // Get file modification time for hash computation
-                    let mod_time = match get_file_mod_time(&mut ftp, filename) {
-                        Ok(time) => time,
-                        Err(_) => chrono::Utc::now(), // Fallback to current time
-                    };
-                    let file_hash = compute_file_hash(filename, remote_dir, initial_size.unwrap_or(0) as u64, mod_time);
+                // Move local file to FTPU-Sent directory after successful upload
+                let local_path = PathBuf::from(remote_dir); // remote_dir actually contains local file path
+                match move_to_sent_directory(&local_path, &config.local_source_path) {
+                    Ok(sent_path) => {
+                        config_log(&config, &format!("{} [Thread-{}] {} moved to FTPU-Sent",
+                            "📦".green(),
+                            thread_id.to_string().cyan(),
+                            filename.green()
+                        ));
+                        config_log(&config, &format!("   Sent to: {}", sent_path.display()));
 
-                    // Try database first
-                    // Use config_id (not session_id) so hashes persist across restarts
-                    if let Err(e) = db::save_hash(&config.config_id, remote_dir, filename, initial_size.unwrap_or(0) as u64, mod_time, file_hash) {
-                        config_log(&config, &format!("{} [Thread-{}] Failed to save hash to database for {}: {}, trying legacy file",
+                        // Send success notification to Live Notifications UI
+                        let _ = send_notification(&config, "success", &format!("✅ Uploaded: {}", filename), Some(filename), None);
+                    }
+                    Err(e) => {
+                        config_log(&config, &format!("{} [Thread-{}] Failed to move {} to FTPU-Sent: {}",
                             "⚠️".yellow(),
                             thread_id.to_string().yellow(),
                             filename.yellow(),
                             e.to_string().yellow()
                         ));
 
-                        // Fallback to legacy hash file
-                        match get_hash_file_path(hash_file) {
-                            Ok(hash_file_path) => {
-                                if let Err(e) = save_file_hash(&hash_file_path, filename, remote_dir, file_hash, initial_size.unwrap_or(0) as u64, mod_time) {
-                                    config_log(&config, &format!("{} [Thread-{}] Failed to save hash to legacy file for {}: {}",
-                                        "⚠️".yellow(),
-                                        thread_id.to_string().yellow(),
-                                        filename.yellow(),
-                                        e.to_string().yellow()
-                                    ));
-                                }
-                            }
-                            Err(e) => {
-                                config_log(&config, &format!("{} [Thread-{}] Failed to create hash file path for {}: {}",
-                                    "⚠️".yellow(),
-                                    thread_id.to_string().yellow(),
-                                    filename.yellow(),
-                                    e.to_string().yellow()
-                                ));
-                            }
-                        }
-                    }
-                    
-                    // Don't delete from server in keep mode
-                    config_log(&config, &format!("{} [Thread-{}] {} kept on server (keep mode)", 
-                        "💾".blue(), 
-                        thread_id.to_string().cyan(), 
-                        filename.green()
-                    ));
-                } else {
-                    // Delete from server in delete mode
-                    if let Ok(_) = ftp.rm(filename) {
-                        config_log(&config, &format!("{} [Thread-{}] {} deleted from server", 
-                            "🗑️".green(), 
-                            thread_id.to_string().cyan(), 
-                            filename.green()
-                        ));
-                    } else {
-                        config_log(&config, &format!("{} [Thread-{}] Failed to delete {} from server", 
-                            "⚠️".yellow(), 
-                            thread_id.to_string().yellow(), 
-                            filename.yellow()
-                        ));
+                        // Send warning notification - file uploaded but couldn't be moved
+                        let _ = send_notification(&config, "warning", &format!("⚠️ Uploaded {} but failed to move to FTPU-Sent", filename), Some(filename), None);
                     }
                 }
                 
                 // Calculate download speed for this file
-                let download_time = download_start.elapsed().as_secs_f64();
+                let upload_time = upload_start.elapsed().as_secs_f64();
                 let size_mb = initial_size.unwrap_or(0) as f64 / 1024.0 / 1024.0;
-                let speed_mbps = if download_time > 0.0 {
-                    size_mb / download_time
+                let speed_mbps = if upload_time > 0.0 {
+                    size_mb / upload_time
                 } else {
                     0.0
                 };
 
                 // Log completion for debugging but don't overwrite main status file
-                config_log(&config_arc_local, &format!("✅ Downloaded: {} ({:.2} MB at {:.2} MB/s in {:.1}s)",
+                config_log(&config_arc_local, &format!("✅ Uploaded: {} ({:.2} MB at {:.2} MB/s in {:.1}s)",
                     filename,
                     size_mb,
                     speed_mbps,
-                    download_time
+                    upload_time
                 ));
                 
                 // Send completion via status channel (will be processed by status receiver thread)
                 let _ = status_tx.send(StatusUpdate {
                     stage: "FileComplete".to_string(), // Use different stage to avoid confusion
-                    filename: format!("✅ Downloaded: {} ({:.2} MB at {:.2} MB/s in {:.1}s)", 
+                    filename: format!("✅ Uploaded: {} ({:.2} MB at {:.2} MB/s in {:.1}s)", 
                         filename,
                         initial_size.unwrap_or(0) as f64 / 1024.0 / 1024.0,
                         speed_mbps,
-                        download_time
+                        upload_time
                     ),
                     progress: file_progress + 0.25,
                     thread_id,
@@ -2644,7 +2721,7 @@ fn send_notification(config: &FTPConfig, notification_type: &str, message: &str,
     Ok(())
 }
 
-fn send_status_with_speed(status_file: &str, config: &FTPConfig, stage: &str, filename: &str, progress: f64, file_size: Option<u64>, download_speed_mbps: Option<f64>, download_time_secs: Option<f64>) -> Result<(), Box<dyn std::error::Error>> {
+fn send_status_with_speed(status_file: &str, config: &FTPConfig, stage: &str, filename: &str, progress: f64, file_size: Option<u64>, upload_speed_mbps: Option<f64>, upload_time_secs: Option<f64>) -> Result<(), Box<dyn std::error::Error>> {
     let status = FTPStatus {
         config_id: config.config_id.clone(),
         stage: stage.to_string(),
@@ -2654,8 +2731,8 @@ fn send_status_with_speed(status_file: &str, config: &FTPConfig, stage: &str, fi
             .duration_since(std::time::UNIX_EPOCH)?
             .as_secs(),
         file_size,
-        download_speed_mbps,
-        download_time_secs,
+        upload_speed_mbps,
+        upload_time_secs,
     };
 
     let status_json = serde_json::to_string(&status)?;
@@ -2674,7 +2751,7 @@ fn send_session_report(session_file: &str, config: &FTPConfig, session_state: &S
         config_id: config.config_id.clone(),
         total_files: session_state.total_files,
         total_bytes: session_state.total_bytes,
-        total_time_secs: session_state.total_download_time,
+        total_time_secs: session_state.total_upload_time,
         average_speed_mbps: session_state.get_average_speed_mbps(),
     };
 
@@ -2714,115 +2791,156 @@ fn write_result(result_file: &str, config: &FTPConfig, success: bool, message: &
     Ok(())
 }
 
-// Helper function to download files with proper mode detection
-fn download_file(ftp: &mut ftp::FtpStream, filename: &str, remote_dir: &str, local_dir: &str, respect_file_paths: bool, expected_size: u64) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    println!("🔍 DOWNLOAD DEBUG: Starting download_file for {} from {}", filename, remote_dir);
-    
-    // Detect if file is likely text or binary based on extension
-    let is_text_file = is_likely_text_file(filename);
-    
-    println!("🔍 DOWNLOAD DEBUG: File {} detected as {}", filename, if is_text_file { "TEXT" } else { "BINARY" });
-    
-    // Set transfer mode based on file type
-    if is_text_file {
-        println!("🔍 DOWNLOAD DEBUG: Setting ASCII mode for {}", filename);
-        ftp.transfer_type(ftp::types::FileType::Ascii(ftp::types::FormatControl::Default))?;
-    } else {
-        println!("🔍 DOWNLOAD DEBUG: Setting BINARY mode for {}", filename);
-        ftp.transfer_type(ftp::types::FileType::Binary)?;
+// Move file to FTPU-Sent directory after successful upload
+fn move_to_sent_directory(local_path: &PathBuf, base_dir: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let base_path = PathBuf::from(base_dir);
+    let sent_dir = base_path.join("FTPU-Sent");
+
+    // Create FTPU-Sent directory if it doesn't exist
+    if !sent_dir.exists() {
+        fs::create_dir_all(&sent_dir)?;
     }
-    
-    // Create local path based on respect_file_paths setting
-    let local_path = if respect_file_paths && remote_dir != "/" {
-        // Create directory structure by joining local_dir with remote_dir (excluding root)
-        let remote_path = remote_dir.trim_start_matches('/');
-        let local_path = PathBuf::from(local_dir).join(remote_path).join(filename);
-        local_path
-    } else {
-        // Flat structure - just put file directly in local_dir
-        PathBuf::from(local_dir).join(filename)
-    };
-    
-    // Ensure directory exists
-    if let Some(parent) = local_path.parent() {
+
+    // Preserve directory structure within FTPU-Sent
+    let relative_path = local_path.strip_prefix(&base_path)
+        .unwrap_or(local_path.as_path());
+    let dest_path = sent_dir.join(relative_path);
+
+    // Create parent directories in FTPU-Sent if needed
+    if let Some(parent) = dest_path.parent() {
         fs::create_dir_all(parent)?;
     }
-    
-    // Handle existing files - append _# if file exists
-    let final_path = get_unique_filename(&local_path);
-    let temp_path = if final_path != local_path {
-        // Create temporary path with . prefix for safe download
-        let temp_name = format!(".{}", final_path.file_name().unwrap().to_string_lossy());
-        final_path.with_file_name(temp_name)
+
+    // Move the file
+    fs::rename(local_path, &dest_path)?;
+
+    Ok(dest_path)
+}
+
+// Create remote directory on FTP server (recursive mkdir)
+fn create_remote_directory(ftp: &mut ftp::FtpStream, remote_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // Split path into components and create each level
+    let components: Vec<&str> = remote_path.trim_matches('/').split('/').filter(|s| !s.is_empty()).collect();
+
+    let mut current_path = String::new();
+    for component in components {
+        current_path = if current_path.is_empty() {
+            format!("/{}", component)
+        } else {
+            format!("{}/{}", current_path, component)
+        };
+
+        // Try to create directory (ignore error if it already exists)
+        match ftp.mkdir(&current_path) {
+            Ok(_) => {
+                println!("📁 Created remote directory: {}", current_path);
+            },
+            Err(e) => {
+                // Check if error is "directory already exists" - that's ok
+                let err_str = e.to_string();
+                if !err_str.contains("550") && !err_str.contains("exists") {
+                    // Only log as debug, don't fail - directory might already exist
+                    println!("📁 Note: mkdir {} - {}", current_path, err_str);
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// Helper function to upload files to FTP server
+fn upload_file(ftp: &mut ftp::FtpStream, filename: &str, local_path: &PathBuf, remote_dir: &str, respect_file_paths: bool) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    println!("🔍 UPLOAD DEBUG: Starting upload_file for {} to {}", filename, remote_dir);
+
+    // Detect if file is likely text or binary based on extension
+    let is_text_file = is_likely_text_file(filename);
+
+    println!("🔍 UPLOAD DEBUG: File {} detected as {}", filename, if is_text_file { "TEXT" } else { "BINARY" });
+
+    // Set transfer mode based on file type
+    if is_text_file {
+        println!("🔍 UPLOAD DEBUG: Setting ASCII mode for {}", filename);
+        ftp.transfer_type(ftp::types::FileType::Ascii(ftp::types::FormatControl::Default))?;
     } else {
-        // Create temporary path with . prefix for safe download
-        let temp_name = format!(".{}", filename);
-        local_path.with_file_name(temp_name)
+        println!("🔍 UPLOAD DEBUG: Setting BINARY mode for {}", filename);
+        ftp.transfer_type(ftp::types::FileType::Binary)?;
+    }
+
+    // Determine remote path based on respect_file_paths setting
+    let remote_filename = if respect_file_paths {
+        // Preserve directory structure - extract relative path from local_path
+        filename.to_string()
+    } else {
+        // Flat structure - just use filename
+        local_path.file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| filename.to_string())
     };
-    
-    println!("🔍 DOWNLOAD DEBUG: About to send RETR command for {}", filename);
-    
-    // Download file to temporary location
-    let data = match ftp.retr(filename, |stream| {
-        println!("🔍 DOWNLOAD DEBUG: RETR command accepted, reading data stream for {}", filename);
-        let mut buffer = Vec::new();
-        let result = stream.read_to_end(&mut buffer);
-        println!("🔍 DOWNLOAD DEBUG: Read {} bytes from stream for {}", buffer.len(), filename);
-        Ok(result.map(|_| buffer).unwrap_or_default())
-    }) {
-        Ok(data) => {
-            println!("🔍 DOWNLOAD DEBUG: RETR successful for {}, got {} bytes", filename, data.len());
-            data
+
+    // Create parent directories if respect_file_paths is enabled and filename contains path
+    if respect_file_paths && remote_filename.contains('/') {
+        // Extract directory part from the remote filename
+        if let Some(parent_dir) = PathBuf::from(&remote_filename).parent() {
+            let parent_str = parent_dir.to_string_lossy().to_string();
+            if !parent_str.is_empty() {
+                // Build full remote path
+                let full_remote_dir = if remote_dir == "/" {
+                    format!("/{}", parent_str)
+                } else {
+                    format!("{}/{}", remote_dir.trim_end_matches('/'), parent_str)
+                };
+
+                println!("📁 UPLOAD DEBUG: Creating remote directory: {}", full_remote_dir);
+
+                // Create directories recursively
+                let components: Vec<&str> = full_remote_dir.trim_matches('/').split('/').filter(|s| !s.is_empty()).collect();
+                let mut current_path = String::new();
+
+                for component in components {
+                    current_path = if current_path.is_empty() {
+                        format!("/{}", component)
+                    } else {
+                        format!("{}/{}", current_path, component)
+                    };
+
+                    // Try to create directory (ignore error if it already exists)
+                    match ftp.mkdir(&current_path) {
+                        Ok(_) => {
+                            println!("📁 Created remote directory: {}", current_path);
+                        },
+                        Err(_) => {
+                            // Directory likely already exists - that's OK
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Read local file
+    let file_data = fs::read(local_path)?;
+    let file_size = file_data.len();
+
+    println!("🔍 UPLOAD DEBUG: Read {} bytes from local file {}", file_size, local_path.display());
+    println!("🔍 UPLOAD DEBUG: About to send STOR command for {}", remote_filename);
+
+    // Upload file using put()
+    let mut cursor = std::io::Cursor::new(file_data);
+    match ftp.put(&remote_filename, &mut cursor) {
+        Ok(_) => {
+            println!("🔍 UPLOAD DEBUG: STOR successful for {}, uploaded {} bytes", remote_filename, file_size);
         },
         Err(e) => {
-            println!("❌ DOWNLOAD DEBUG: RETR FAILED for {}: {}", filename, e);
+            println!("❌ UPLOAD DEBUG: STOR FAILED for {}: {}", remote_filename, e);
             return Err(Box::new(e));
         }
     };
-    
-    // CRITICAL: Verify download size matches expected size
-    if data.len() as u64 != expected_size {
-        // Clean up temp file if size mismatch
-        let _ = fs::remove_file(&temp_path);
-        return Err(format!("Download size mismatch: expected {} bytes, got {} bytes", expected_size, data.len()).into());
-    }
-    
-    // Write to temporary file first
-    fs::write(&temp_path, data)?;
-    
-    // Verify the written file size matches expected size
-    if let Ok(metadata) = fs::metadata(&temp_path) {
-        if metadata.len() != expected_size {
-            // Clean up temp file if written size mismatch
-            let _ = fs::remove_file(&temp_path);
-            return Err(format!("Written file size mismatch: expected {} bytes, got {} bytes", expected_size, metadata.len()).into());
-        }
-    } else {
-        // Clean up temp file if can't read metadata
-        let _ = fs::remove_file(&temp_path);
-        return Err("Failed to read written file metadata".into());
-    }
-    
-    // Move temporary file to final location (atomic operation)
-    fs::rename(&temp_path, &final_path)?;
-    
-    // Final verification: check final file size
-    if let Ok(metadata) = fs::metadata(&final_path) {
-        if metadata.len() != expected_size {
-            // Clean up final file if size still wrong
-            let _ = fs::remove_file(&final_path);
-            return Err(format!("Final file size mismatch: expected {} bytes, got {} bytes", expected_size, metadata.len()).into());
-        }
-    } else {
-        // Clean up final file if can't read metadata
-        let _ = fs::remove_file(&final_path);
-        return Err("Failed to read final file metadata".into());
-    }
-    
+
     // Reset to binary mode for next file
     ftp.transfer_type(ftp::types::FileType::Binary)?;
-    
-    Ok(final_path)
+
+    Ok(local_path.clone())
 }
 
 // Helper function to get unique filename (append _# if file exists)

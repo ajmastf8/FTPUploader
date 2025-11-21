@@ -43,7 +43,7 @@ struct ContentView: View {
                             .frame(width: 32, height: 32)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
 
-                        Text("FTP Downloader")
+                        Text("FTP Uploader")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
@@ -88,7 +88,7 @@ struct ContentView: View {
                     .foregroundColor(.blue)
                     .font(.system(size: 14))
 
-                Text("FTP Downloader runs from the menu bar. Closing this window keeps your syncs running in the background.")
+                Text("FTP Uploader runs from the menu bar. Closing this window keeps your syncs running in the background.")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
 
@@ -247,8 +247,8 @@ struct ContentView: View {
                     print("🔍 Saving new configuration:")
                     print("   name: '\(newConfig.name)'")
                     print("   serverAddress: '\(newConfig.serverAddress)'")
-                    print("   localDownloadPath: '\(newConfig.localDownloadPath)'")
-                    print("   syncDirectories: \(newConfig.syncDirectories)")
+                    print("   localSourcePath: '\(newConfig.localSourcePath)'")
+                    print("   remoteDestination: \(newConfig.remoteDestination)")
                     
                     configurations.append(newConfig)
                     selectedConfigIndex = configurations.count - 1
@@ -284,9 +284,9 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
-                // FTP Downloader menu
-                Menu("FTP Downloader") {
-                    Button("About FTP Downloader") {
+                // FTP Uploader menu
+                Menu("FTP Uploader") {
+                    Button("About FTP Uploader") {
                         NSApp.orderFrontStandardAboutPanel(nil)
                     }
 
@@ -342,7 +342,7 @@ struct ContentView: View {
 
                 // Help menu
                 Menu("Help") {
-                    Button("FTP Downloader Help") {
+                    Button("FTP Uploader Help") {
                         helpManager.openHelp()
                     }
 
@@ -604,40 +604,40 @@ struct ConfigurationDetailView: View {
                         .font(.system(.body, design: .monospaced))
                     
                     HStack {
-                        Text("FTP Paths:")
+                        Text("Remote Destination:")
                             .font(.headline)
-                        
-                        Text(config.syncDirectories.joined(separator: " | "))
+
+                        Text(config.remoteDestination)
                             .font(.system(.body, design: .monospaced))
                             .foregroundColor(.secondary)
                     }
-                    
+
                     HStack {
-                        Text("Download Mode:")
+                        Text("After Upload:")
                             .font(.headline)
-                        
+
                         HStack(spacing: 4) {
-                            Image(systemName: config.downloadMode == .deleteAfterDownload ? "trash" : "archivebox")
-                                .foregroundColor(config.downloadMode == .deleteAfterDownload ? .red : .blue)
-                            
-                            Text(config.downloadMode == .deleteAfterDownload ? "Delete After Download" : "Keep After Download")
+                            Image(systemName: "archivebox")
+                                .foregroundColor(.blue)
+
+                            Text("Move to FTPU-Sent")
                                 .font(.system(.body, design: .monospaced))
                                 .foregroundColor(.secondary)
                         }
                     }
-                    
+
                     HStack {
                         Image(systemName: "folder")
                             .foregroundColor(.accentColor)
-                        
-                        Text("Local Download Directory:")
+
+                        Text("Local Source Directory:")
                             .font(.headline)
-                        
+
                         Button(action: {
-                            let url = URL(fileURLWithPath: config.localDownloadPath)
+                            let url = URL(fileURLWithPath: config.localSourcePath)
                             NSWorkspace.shared.open(url)
                         }) {
-                            Text(config.localDownloadPath)
+                            Text(config.localSourcePath)
                                 .font(.system(.body, design: .monospaced))
                                 .foregroundColor(.blue)
                                 .underline()
@@ -655,11 +655,11 @@ struct ConfigurationDetailView: View {
                             .font(.headline)
                         
                         HStack(spacing: 4) {
-                            Text("\(config.downloadAggressiveness.connectionCount) connections")
+                            Text("\(config.uploadAggressiveness.connectionCount) connections")
                                 .font(.system(.caption, design: .monospaced))
                                 .fontWeight(.medium)
                                 .foregroundColor(.green)
-                            Text("(\(config.downloadAggressiveness.shortName))")
+                            Text("(\(config.uploadAggressiveness.shortName))")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -878,15 +878,15 @@ struct ConfigurationDetailView: View {
                     let encoder = JSONEncoder()
                     encoder.outputFormatting = .prettyPrinted
                     // Use createSaveableCopy to avoid @Published/Codable issues
-                    // Clear local download path - the importer will need to set their own
+                    // Clear local source path - the importer will need to set their own
                     // and grant security-scoped bookmark permissions
                     var exportConfig = config.createSaveableCopy()
-                    exportConfig.localDownloadPath = ""
+                    exportConfig.localSourcePath = ""
                     exportConfig.directoryBookmark = nil
                     let data = try encoder.encode(exportConfig)
                     try data.write(to: url)
                     print("✅ Configuration exported to: \(url.path)")
-                    print("   📁 Local download path cleared for security")
+                    print("   📁 Local source path cleared for security")
                 } catch {
                     print("❌ Failed to export configuration: \(error)")
                 }

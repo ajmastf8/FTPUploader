@@ -19,7 +19,7 @@ struct HelpView: NSViewRepresentable {
     }
 
     private func loadHelpContent(in webView: WKWebView) {
-        if let helpPath = Bundle.main.path(forResource: "FTPDownloaderHelp", ofType: "html", inDirectory: "Help") {
+        if let helpPath = Bundle.main.path(forResource: "FTPUploaderHelp", ofType: "html", inDirectory: "Help") {
             let helpURL = URL(fileURLWithPath: helpPath)
             webView.loadFileURL(helpURL, allowingReadAccessTo: helpURL.deletingLastPathComponent())
         } else {
@@ -34,7 +34,7 @@ struct HelpView: NSViewRepresentable {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>FTP Downloader Help</title>
+            <title>FTP Uploader Help</title>
             <style>
                 body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; line-height: 1.6; }
                 .header { text-align: center; margin-bottom: 30px; }
@@ -45,8 +45,8 @@ struct HelpView: NSViewRepresentable {
         </head>
         <body>
             <div class="header">
-                <h1>🚀 FTP Downloader Help</h1>
-                <p>High-performance automated FTP file downloading</p>
+                <h1>🚀 FTP Uploader Help</h1>
+                <p>High-performance automated FTP file uploading</p>
             </div>
 
             <div class="section">
@@ -128,7 +128,7 @@ struct HelpWindow: View {
         VStack(spacing: 0) {
             // Header with search
             HStack {
-                Text("FTP Downloader Help")
+                Text("FTP Uploader Help")
                     .font(.largeTitle)
                     .fontWeight(.bold)
 

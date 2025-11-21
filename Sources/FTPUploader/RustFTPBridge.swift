@@ -117,8 +117,8 @@ class RustFTPBridge {
         // Set FTP_DATA_DIR environment variable for database storage
         // For sandboxed apps, use Application Support directory in the container
         let dataDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("FTPDownloader")
-            .path ?? "\(tempDir)/FTPDownloader"
+            .appendingPathComponent("FTPUploader")
+            .path ?? "\(tempDir)/FTPUploader"
 
         // Create data directory if it doesn't exist
         try? FileManager.default.createDirectory(atPath: dataDir, withIntermediateDirectories: true)
@@ -316,7 +316,7 @@ class RustFTPBridge {
                     print("🔔 RustFTPBridge: Posting .rustDownloadSpeedUpdate notification")
                     print("🔔 RustFTPBridge: filename in userInfo: \(userInfo["filename"] ?? "NONE")")
                     NotificationCenter.default.post(
-                        name: .rustDownloadSpeedUpdate,
+                        name: .rustUploadSpeedUpdate,
                         object: nil,
                         userInfo: userInfo
                     )

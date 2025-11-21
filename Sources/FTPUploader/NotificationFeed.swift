@@ -183,7 +183,7 @@ struct NotificationFeed: View {
 
         // Subscribe to download completions (for file download notifications)
         downloadObserver = NotificationCenter.default.addObserver(
-            forName: .rustDownloadSpeedUpdate,
+            forName: .rustUploadSpeedUpdate,
             object: nil,
             queue: .main
         ) { notification in

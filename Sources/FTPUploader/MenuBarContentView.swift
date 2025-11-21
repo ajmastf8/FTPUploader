@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Compact menu bar interface for FTP Downloader
+/// Compact menu bar interface for FTP Uploader
 /// Shows status of active configurations and provides quick controls
 struct MenuBarContentView: View {
     @ObservedObject var syncManager: FileSyncManager
@@ -22,11 +22,11 @@ struct MenuBarContentView: View {
                         .frame(width: 16, height: 16)
                 } else {
                     // Fallback to SF Symbol if custom icon not found
-                    Image(systemName: "arrow.down.circle.fill")
+                    Image(systemName: "arrow.up.circle.fill")
                         .font(.title3)
                         .foregroundColor(.orange)
                 }
-                Text("FTP Downloader")
+                Text("FTP Uploader")
                     .font(.headline)
                 Spacer()
             }
@@ -227,7 +227,7 @@ struct MenuBarContentView: View {
         // Look for existing main window
         var foundWindow = false
         for window in NSApplication.shared.windows {
-            if window.title == "FTP Downloader" || window.identifier?.rawValue == "main" {
+            if window.title == "FTP Uploader" || window.identifier?.rawValue == "main" {
                 print("🪟 Found existing main window, bringing to front")
                 window.makeKeyAndOrderFront(nil)
                 window.orderFrontRegardless()
@@ -322,15 +322,15 @@ struct MenuBarConfigRow: View {
                 }
 
                 // Local path - clickable to open in Finder
-                if !config.localDownloadPath.isEmpty {
+                if !config.localSourcePath.isEmpty {
                     Button(action: {
-                        openInFinder(path: config.localDownloadPath)
+                        openInFinder(path: config.localSourcePath)
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "folder.fill")
                                 .font(.system(size: 9))
                                 .foregroundColor(.orange)
-                            Text(formatPath(config.localDownloadPath))
+                            Text(formatPath(config.localSourcePath))
                                 .font(.system(size: 9))
                                 .foregroundColor(.blue)
                                 .underline()
@@ -338,7 +338,7 @@ struct MenuBarConfigRow: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    .help("Open \(config.localDownloadPath) in Finder")
+                    .help("Open \(config.localSourcePath) in Finder")
                 }
             }
             .padding(.leading, 16) // Align with config name above
@@ -406,7 +406,7 @@ struct MenuBarConfigRow: View {
         // Look for existing main window
         var foundWindow = false
         for window in NSApplication.shared.windows {
-            if window.title == "FTP Downloader" || window.identifier?.rawValue == "main" {
+            if window.title == "FTP Uploader" || window.identifier?.rawValue == "main" {
                 print("🪟 Found existing main window, bringing to front")
                 window.makeKeyAndOrderFront(nil)
                 window.orderFrontRegardless()

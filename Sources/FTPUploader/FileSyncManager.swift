@@ -29,12 +29,12 @@ struct FTPStatus: Codable {
 // Session report from Rust
 struct SessionReport: Codable {
     let sessionId: String
-    let configId: UInt32
+    let configId: String  // Changed from UInt32 to match Rust String type
     let totalFiles: Int
     let totalBytes: Int
     let totalTimeSecs: Double
     let averageSpeedMbps: Double
-    
+
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case configId = "config_id"
@@ -239,7 +239,7 @@ class FileSyncManager: ObservableObject {
         // Listen for file download completions from Rust
         // Rust sends this notification ONLY for actually downloaded files (not skipped)
         NotificationCenter.default.addObserver(
-            forName: .rustDownloadSpeedUpdate,
+            forName: .rustUploadSpeedUpdate,
             object: nil,
             queue: .main
         ) { [weak self] notification in
@@ -348,7 +348,7 @@ class FileSyncManager: ObservableObject {
         print("🧹 Cleaning up residual files on app launch")
         
         let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let ftpDir = appSupportDir.appendingPathComponent("FTPDownloader")
+        let ftpDir = appSupportDir.appendingPathComponent("FTPUploader")
         
         do {
             // Clear any existing notification files
@@ -467,7 +467,7 @@ class FileSyncManager: ObservableObject {
         print("🧹 Clearing notification files on disk for config: \(configId)")
         
         let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let ftpDir = appSupportDir.appendingPathComponent("FTPDownloader")
+        let ftpDir = appSupportDir.appendingPathComponent("FTPUploader")
         let notificationFile = ftpDir.appendingPathComponent("notifications_\(configId.uuidString).json")
         
         do {
@@ -495,7 +495,7 @@ class FileSyncManager: ObservableObject {
         print("🧹 Clearing all notification files on disk")
         
         let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let ftpDir = appSupportDir.appendingPathComponent("FTPDownloader")
+        let ftpDir = appSupportDir.appendingPathComponent("FTPUploader")
         
         do {
             let fileURLs = try FileManager.default.contentsOfDirectory(at: ftpDir, includingPropertiesForKeys: nil)
@@ -977,9 +977,9 @@ class FileSyncManager: ObservableObject {
                 // Update menu bar icon if needed
                 NotificationCenter.default.post(name: NSNotification.Name("SyncStatusChanged"), object: nil)
             }
-        } else if cleanMessage.contains("Multiple FTPDownloaders detected") ||
-           cleanMessage.contains("Another FTPDownloader detected") ||
-           cleanMessage.contains("Other FTPDownloaders detected") {
+        } else if cleanMessage.contains("Multiple FTPUploaders detected") ||
+           cleanMessage.contains("Another FTPUploader detected") ||
+           cleanMessage.contains("Other FTPUploaders detected") {
 
             // Determine severity based on content
             let level: String
@@ -1195,8 +1195,8 @@ class FileSyncManager: ObservableObject {
         // The call stack analysis was too fragile and blocked legitimate button presses
         print("✅ SECURITY CHECK: Assuming legitimate user interaction")
         
-        if config.syncDirectories.isEmpty {
-            print("⚠️  No sync directories configured for config: \(config.name)")
+        if config.localSourcePath.isEmpty {
+            print("⚠️  No local source path configured for config: \(config.name)")
             return
         }
         
@@ -1250,10 +1250,10 @@ class FileSyncManager: ObservableObject {
 
         print("🔄 Starting sync for config: \(config.name) (ID: \(config.id))")
         print("🔄 Server: \(config.serverAddress)")
-        print("📁 Sync directories: \(config.syncDirectories)")
+        print("📤 Remote destination: \(config.remoteDestination)")
         print("⏱️  Sync interval: \(config.syncInterval)s")
         print("🔍 FTP HANDLES STABILIZATION - Swift stabilization disabled")
-        print("💾 Local download path: \(config.localDownloadPath)")
+        print("📁 Local source path: \(config.localSourcePath)")
 
         // NOTE: No longer adding log entries here - LiveLogsView will collect logs directly from notifications
         // This prevents logs from accumulating in memory when window is closed

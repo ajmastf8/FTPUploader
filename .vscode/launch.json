@@ -17,6 +17,24 @@
             "name": "Release FTPDownloader",
             "program": "${workspaceFolder:FTPUploader}/.build/release/FTPDownloader",
             "preLaunchTask": "swift: Build Release FTPDownloader"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:FTPUploader}",
+            "name": "Debug FTPUploader",
+            "program": "${workspaceFolder:FTPUploader}/.build/debug/FTPUploader",
+            "preLaunchTask": "swift: Build Debug FTPUploader"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:FTPUploader}",
+            "name": "Release FTPUploader",
+            "program": "${workspaceFolder:FTPUploader}/.build/release/FTPUploader",
+            "preLaunchTask": "swift: Build Release FTPUploader"
         }
     ]
 }

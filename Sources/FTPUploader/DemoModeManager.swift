@@ -217,20 +217,20 @@ class DemoModeManager: ObservableObject {
         config.username = "demo_user"
         config.password = "demo_password_12345"
         config.port = 21
-        config.syncDirectories = ["/demo/images"]
+        config.remoteDestination = "/demo/uploads"
         config.syncInterval = 1.0
         config.stabilizationInterval = 0
 
-        // Local download path with timestamp (using Application Support for sandbox compatibility)
+        // Local source path with timestamp (using Application Support for sandbox compatibility)
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd_HHmmss"
         let dateString = dateFormatter.string(from: Date())
 
         // Use Application Support directory which is sandbox-safe
         let appSupportPath = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let ftpDownloaderDir = appSupportPath.appendingPathComponent("FTPDownloader")
-        let demoPath = ftpDownloaderDir.appendingPathComponent("Demo_\(dateString)")
-        config.localDownloadPath = demoPath.path
+        let ftpUploaderDir = appSupportPath.appendingPathComponent("FTPUploader")
+        let demoPath = ftpUploaderDir.appendingPathComponent("Demo_\(dateString)")
+        config.localSourcePath = demoPath.path
 
         return config
     }
@@ -239,7 +239,7 @@ class DemoModeManager: ObservableObject {
     private func clearExistingDemoImages() {
         guard let config = demoConfig else { return }
 
-        let demoURL = URL(fileURLWithPath: config.localDownloadPath)
+        let demoURL = URL(fileURLWithPath: config.localSourcePath)
 
         // Delete the entire demo directory if it exists
         if FileManager.default.fileExists(atPath: demoURL.path) {
@@ -283,7 +283,7 @@ class DemoModeManager: ObservableObject {
     private func createDemoDirectory() -> URL? {
         guard let config = demoConfig else { return nil }
 
-        let demoURL = URL(fileURLWithPath: config.localDownloadPath)
+        let demoURL = URL(fileURLWithPath: config.localSourcePath)
 
         do {
             try FileManager.default.createDirectory(at: demoURL, withIntermediateDirectories: true, attributes: nil)
@@ -450,7 +450,7 @@ class DemoModeManager: ObservableObject {
 
             self.writeSuccessNotification(config: config, message: "")
             self.writeSuccessNotification(config: config, message: "Demo completed successfully!")
-            syncManager.addConfigLog(config.id, message: "📁 All demo images downloaded to: \(config.localDownloadPath)")
+            syncManager.addConfigLog(config.id, message: "📁 Demo images placed in: \(config.localSourcePath)")
             syncManager.addConfigLog(config.id, message: "")
             syncManager.addConfigLog(config.id, message: "ℹ️ Demo mode will cleanup when you quit the app")
         }
@@ -497,7 +497,7 @@ class DemoModeManager: ObservableObject {
         // If this is a file download notification, use rustDownloadSpeedUpdate
         if let filename = filename {
             NotificationCenter.default.post(
-                name: .rustDownloadSpeedUpdate,
+                name: .rustUploadSpeedUpdate,
                 object: nil,
                 userInfo: [
                     "configId": config.id,

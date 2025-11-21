@@ -9,7 +9,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>FTP Downloader</string>
+	<string>FTP Uploader</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -26,11 +26,11 @@
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleGetInfoString</key>
-	<string>FTP Downloader 1.0.1 - High-performance automated FTP file downloading with intelligent stabilization monitoring</string>
+	<string>FTP Uploader 1.0.0 - High-performance automated FTP file uploading with intelligent stabilization monitoring</string>
 	<key>CFBundleHelpBookFolder</key>
 	<string>Help</string>
 	<key>CFBundleHelpBookName</key>
-	<string>FTP Downloader Help</string>
+	<string>FTP Uploader Help</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
@@ -57,11 +57,11 @@
 		<true/>
 	</dict>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>FTP Downloader needs access to save downloaded files from FTP servers to your chosen desktop location.</string>
+	<string>FTP Uploader needs access to monitor files on your Desktop for uploading to FTP servers.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>FTP Downloader needs access to save downloaded files from FTP servers to your Documents folder.</string>
+	<string>FTP Uploader needs access to monitor files in your Documents folder for uploading to FTP servers.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>FTP Downloader needs access to save downloaded files from FTP servers to your Downloads folder.</string>
+	<string>FTP Uploader needs access to monitor files in your Downloads folder for uploading to FTP servers.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
@@ -69,7 +69,7 @@
 	<key>NSMainStoryboardFile</key>
 	<string>Main</string>
 	<key>NSNetworkVolumesUsageDescription</key>
-	<string>FTP Downloader requires network access to connect to FTP servers and download files with high-performance concurrent processing.</string>
+	<string>FTP Uploader requires network access to connect to FTP servers and upload files with high-performance concurrent processing.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

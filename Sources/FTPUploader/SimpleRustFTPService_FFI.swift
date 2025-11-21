@@ -1,6 +1,6 @@
 //
 //  SimpleRustFTPService_FFI.swift
-//  FTPDownloader
+//  FTPUploader
 //
 //  FFI-based version of SimpleRustFTPService using statically-linked Rust library
 //  Replaces Process spawning with direct FFI calls to librust_ftp.a
@@ -12,7 +12,7 @@ import AppKit
 // Notification name for Rust output
 extension Notification.Name {
     static let rustOutputReceived = Notification.Name("rustOutputReceived")
-    static let rustDownloadSpeedUpdate = Notification.Name("rustDownloadSpeedUpdate")
+    static let rustUploadSpeedUpdate = Notification.Name("rustUploadSpeedUpdate")
     static let rustStateUpdate = Notification.Name("rustStateUpdate") // Structured state updates (connected, scanning, error, etc.)
     static let appSystemNotification = Notification.Name("appSystemNotification")
     static let configHashRegistration = Notification.Name("configHashRegistration")
@@ -174,23 +174,21 @@ class SimpleRustFTPService_FFI: FTPService {
             "port": config.port,
             "username": config.username,
             "password": config.password,
-            "remote_directories": config.syncDirectories,
-            "local_download_path": config.localDownloadPath,
+            "remote_destination": config.remoteDestination,
+            "local_source_path": config.localSourcePath,
             "respect_file_paths": config.respectFilePaths,
-            "download_mode": config.downloadMode.rawValue,
             "sync_interval": UInt64(max(1, Int(config.syncInterval * 1000))),
             "stabilization_interval": UInt64(config.stabilizationInterval * 1000),
-            "download_aggressiveness": UInt32(config.downloadAggressiveness.rawValue),
+            "upload_aggressiveness": UInt32(config.uploadAggressiveness.rawValue),
             "auto_tune_aggressiveness": config.autoTuneAggressiveness,
             "config_id": config.id.uuidString, // Use UUID string (stable across restarts)
             "config_name": config.name,
             "session_id": config.sessionId
         ]
 
-        print("🔧 Sending to FTP backend (FFI) - downloadMode: '\(config.downloadMode.rawValue)'")
         print("🔧 Sending to FTP backend (FFI) - syncInterval: \(config.syncInterval)s")
         print("🔧 Sending to FTP backend (FFI) - stabilizationInterval: \(config.stabilizationInterval)s")
-        print("🔧 Sending to FTP backend (FFI) - downloadAggressiveness: \(config.downloadAggressiveness.rawValue) connections")
+        print("🔧 Sending to FTP backend (FFI) - uploadAggressiveness: \(config.uploadAggressiveness.rawValue) connections")
 
         return configData
     }
@@ -283,6 +281,12 @@ class SimpleRustFTPService_FFI: FTPService {
         let resultFile = AppFileManager.shared.getResultFilePath(for: config.id)
         let sessionFile = AppFileManager.shared.getSessionFilePath(for: config.id)
 
+        // CRITICAL: Remove stale result file from previous runs to prevent premature completion detection
+        if FileManager.default.fileExists(atPath: resultFile) {
+            try? FileManager.default.removeItem(atPath: resultFile)
+            print("🧹 Cleared stale result file: \(resultFile)")
+        }
+
         print("🔍 Status monitoring started for config: \(config.name)")
 
         lastStatusUpdate = Date()
@@ -355,9 +359,10 @@ class SimpleRustFTPService_FFI: FTPService {
             self.statusTimer = nil
 
             // Read and report session statistics
-            if let sessionData = try? Data(contentsOf: URL(fileURLWithPath: sessionFile)),
-               let sessionReport = try? JSONDecoder().decode(SessionReport.self, from: sessionData) {
-                print("📊 Session file read: \(sessionReport.totalFiles) files")
+            do {
+                let sessionData = try Data(contentsOf: URL(fileURLWithPath: sessionFile))
+                let sessionReport = try JSONDecoder().decode(SessionReport.self, from: sessionData)
+                print("📊 Session file read: \(sessionReport.totalFiles) files, \(sessionReport.averageSpeedMbps) MB/s")
                 NotificationCenter.default.post(
                     name: .rustOutputReceived,
                     object: nil,
@@ -366,6 +371,13 @@ class SimpleRustFTPService_FFI: FTPService {
                         "sessionReport": sessionReport
                     ]
                 )
+            } catch {
+                print("⚠️ Failed to read session file: \(error)")
+                // Try to show raw content for debugging
+                if let rawData = try? Data(contentsOf: URL(fileURLWithPath: sessionFile)),
+                   let rawString = String(data: rawData, encoding: .utf8) {
+                    print("⚠️ Raw session file content: \(rawString.prefix(500))")
+                }
             }
 
             // Clean up temp files

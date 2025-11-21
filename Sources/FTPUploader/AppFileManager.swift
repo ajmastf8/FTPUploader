@@ -4,7 +4,7 @@ import Foundation
 class AppFileManager {
     static let shared = AppFileManager()
     
-    private let appName = "FTPDownloader"
+    private let appName = "FTPUploader"
     private var appSupportDirectory: URL?
     
     private init() {

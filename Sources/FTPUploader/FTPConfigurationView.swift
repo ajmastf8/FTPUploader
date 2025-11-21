@@ -25,13 +25,12 @@ struct FTPConfigurationView: View {
     @State private var username: String = ""
     @State private var password: String = ""
     @State private var port: Int = 21
-    @State private var localDownloadPath: String = ""
-    @State private var syncDirectories: [String] = []
+    @State private var localSourcePath: String = ""
+    @State private var remoteDestination: String = "/"
     @State private var respectFilePaths: Bool = true
-    @State private var downloadMode: FTPConfig.DownloadMode = .deleteAfterDownload
     @State private var syncInterval: TimeInterval = 5
     @State private var stabilizationInterval: TimeInterval = 5
-    @State private var downloadAggressiveness: FTPConfig.DownloadAggressiveness = .moderate
+    @State private var uploadAggressiveness: FTPConfig.UploadAggressiveness = .moderate
     @State private var autoTuneAggressiveness: Bool = true
     @State private var runOnLaunch: Bool = false
     @State private var refreshTrigger = false
@@ -206,8 +205,8 @@ struct FTPConfigurationView: View {
                                         Text("Aggressiveness:")
                                             .font(.subheadline)
                                             .fontWeight(.medium)
-                                        Picker("", selection: $downloadAggressiveness) {
-                                            ForEach(FTPConfig.DownloadAggressiveness.allCases, id: \.self) { aggressiveness in
+                                        Picker("", selection: $uploadAggressiveness) {
+                                            ForEach(FTPConfig.UploadAggressiveness.allCases, id: \.self) { aggressiveness in
                                                 Text("\(aggressiveness.shortName) (\(aggressiveness.connectionCount))").tag(aggressiveness)
                                             }
                                         }
@@ -234,11 +233,11 @@ struct FTPConfigurationView: View {
                         
                         // Right Column
                         VStack(alignment: .leading, spacing: 24) {
-                            // Local Download Section
+                            // Local Source Section
                             VStack(alignment: .leading, spacing: 16) {
-                                SectionHeader(title: "Local Download")
+                                SectionHeader(title: "Local Source")
                                 HStack {
-                                    CustomTextField(title: "Download Path", text: $localDownloadPath, placeholder: "/Users/username/Downloads")
+                                    CustomTextField(title: "Source Path", text: $localSourcePath, placeholder: "/Users/username/Documents/ToUpload")
                                     Button("Browse") {
                                         print("Browse button clicked! Opening native file picker")
                                         openDirectoryPicker()
@@ -246,37 +245,26 @@ struct FTPConfigurationView: View {
                                     .buttonStyle(.bordered)
                                     .disabled(isDemoConfig)
                                 }
+                                Text("📁 Files in this directory will be uploaded to the FTP server")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
                             .disabled(isDemoConfig)
-                            
-                            // FTP Directories to Monitor Section
-                            VStack(alignment: .leading, spacing: 16) {
-                                SectionHeader(title: "FTP Directories to Monitor")
-                                VStack(alignment: .leading, spacing: 12) {
-                                    ForEach(syncDirectories, id: \.self) { directory in
-                                        HStack {
-                                            Text(directory)
-                                                .font(.system(.body, design: .monospaced))
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .background(Color.secondary.opacity(0.1))
-                                                .cornerRadius(4)
-                                            Button(action: { removeSyncDirectory(directory) }) {
-                                                Image(systemName: "minus.circle.fill")
-                                                    .foregroundColor(.red)
-                                            }
-                                            .buttonStyle(.plain)
-                                            .disabled(isDemoConfig)
-                                        }
-                                    }
-                                    .id(refreshTrigger) // Force refresh when this changes
 
+                            // Remote Destination Section
+                            VStack(alignment: .leading, spacing: 16) {
+                                SectionHeader(title: "Remote Destination")
+                                HStack {
+                                    CustomTextField(title: "FTP Path", text: $remoteDestination, placeholder: "/uploads")
                                     Button("Browse FTP") {
                                         showingFTPServerBrowser = true
                                     }
                                     .buttonStyle(.bordered)
                                     .disabled(serverAddress.isEmpty || username.isEmpty || password.isEmpty || port <= 0 || isDemoConfig)
                                 }
+                                Text("📤 Files will be uploaded to this directory on the FTP server")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
                             .disabled(isDemoConfig)
                             
@@ -292,11 +280,11 @@ struct FTPConfigurationView: View {
                                         }
 
                                     if respectFilePaths {
-                                        Text("📁 Local downloads will maintain the same directory structure as the FTP server")
+                                        Text("📁 Uploads will maintain the same directory structure on the FTP server")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     } else {
-                                        Text("📁 All files will be downloaded to the root download directory")
+                                        Text("📁 All files will be uploaded to the root remote directory")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
@@ -319,31 +307,13 @@ struct FTPConfigurationView: View {
                                 }
 
                                 VStack(alignment: .leading, spacing: 12) {
-                                    Text("After download:")
+                                    Text("After successful upload:")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
 
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        RadioButton(title: "Delete files from server", isSelected: downloadMode == .deleteAfterDownload) {
-                                            downloadMode = .deleteAfterDownload
-                                            print("🔍 Download mode changed to: Delete after download")
-                                        }
-
-                                        RadioButton(title: "Keep files on server", isSelected: downloadMode == .keepAfterDownload) {
-                                            downloadMode = .keepAfterDownload
-                                            print("🔍 Download mode changed to: Keep after download")
-                                        }
-                                    }
-
-                                    if downloadMode == .deleteAfterDownload {
-                                        Text("🗑️ Files will be removed from the FTP server after successful download")
-                                            .font(.caption)
-                                            .foregroundColor(.red)
-                                    } else {
-                                        Text("💾 Files will remain on the FTP server after download")
-                                            .font(.caption)
-                                            .foregroundColor(.blue)
-                                    }
+                                    Text("📦 Files will be moved to FTPU-Sent directory")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
                                 }
                             }
                             .disabled(isDemoConfig)
@@ -384,38 +354,35 @@ struct FTPConfigurationView: View {
             print("   isNewConfiguration: \(isNewConfiguration)")
             print("   configuration.name: '\(configuration.name)'")
             print("   configuration.serverAddress: '\(configuration.serverAddress)'")
-            print("   configuration.localDownloadPath: '\(configuration.localDownloadPath)'")
+            print("   configuration.localSourcePath: '\(configuration.localSourcePath)'")
             print("   configuration.port: \(configuration.port)")
-            
+
             // Sync local state with configuration object
             name = configuration.name
             serverAddress = configuration.serverAddress
             username = configuration.username
             password = configuration.password
             port = configuration.port
-            localDownloadPath = configuration.localDownloadPath
-            // Set "/" as default FTP directory if empty (for new configurations)
-            syncDirectories = configuration.syncDirectories.isEmpty ? ["/"] : configuration.syncDirectories
+            localSourcePath = configuration.localSourcePath
+            remoteDestination = configuration.remoteDestination.isEmpty ? "/" : configuration.remoteDestination
             respectFilePaths = configuration.respectFilePaths
-            downloadMode = configuration.downloadMode
             syncInterval = configuration.syncInterval
             stabilizationInterval = configuration.stabilizationInterval
-            downloadAggressiveness = configuration.downloadAggressiveness
+            uploadAggressiveness = configuration.uploadAggressiveness
             autoTuneAggressiveness = configuration.autoTuneAggressiveness
             runOnLaunch = configuration.runOnLaunch
 
             print("   respectFilePaths: \(respectFilePaths)")
-            print("   downloadMode: \(downloadMode)")
-            print("   downloadAggressiveness: \(downloadAggressiveness)")
+            print("   uploadAggressiveness: \(uploadAggressiveness)")
             print("   autoTuneAggressiveness: \(autoTuneAggressiveness)")
             print("   runOnLaunch: \(runOnLaunch)")
-            print("   syncDirectories: \(syncDirectories)")
+            print("   remoteDestination: \(remoteDestination)")
         }
         .onChange(of: configuration.serverAddress) {
             print("🔍 serverAddress changed to: '\(configuration.serverAddress)'")
         }
-        .onChange(of: configuration.localDownloadPath) {
-            print("🔍 localDownloadPath changed to: '\(configuration.localDownloadPath)'")
+        .onChange(of: configuration.localSourcePath) {
+            print("🔍 localSourcePath changed to: '\(configuration.localSourcePath)'")
         }
         .onChange(of: configuration.port) {
             print("🔍 port changed to: \(configuration.port)")
@@ -423,11 +390,8 @@ struct FTPConfigurationView: View {
         .onChange(of: respectFilePaths) {
             print("🔍 respectFilePaths changed to: \(respectFilePaths)")
         }
-        .onChange(of: downloadMode) {
-            print("🔍 downloadMode changed to: \(downloadMode)")
-        }
-        .onChange(of: syncDirectories) {
-            print("🔍 syncDirectories changed to: \(syncDirectories)")
+        .onChange(of: remoteDestination) {
+            print("🔍 remoteDestination changed to: \(remoteDestination)")
         }
         .sheet(isPresented: $showingFTPServerBrowser) {
             FTPServerBrowserView(
@@ -435,10 +399,7 @@ struct FTPConfigurationView: View {
                 username: username,
                 password: password,
                 port: String(port),
-                selectedDirectories: Binding(
-                    get: { syncDirectories },
-                    set: { syncDirectories = $0 }
-                )
+                selectedDirectory: $remoteDestination
             )
         }
         .onChange(of: showingFTPServerBrowser) {
@@ -462,10 +423,10 @@ struct FTPConfigurationView: View {
                 print("Import failed: \(error)")
             }
         }
-        .alert("Set Local Download Directory", isPresented: $showingImportAlert) {
+        .alert("Set Local Source Directory", isPresented: $showingImportAlert) {
             Button("OK") { }
         } message: {
-            Text("Configuration imported successfully! Please set the local download directory using the Browse button before saving.")
+            Text("Configuration imported successfully! Please set the local source directory using the Browse button before saving.")
         }
     }
 }
@@ -479,19 +440,16 @@ extension FTPConfigurationView {
                            !username.isEmpty &&
                            !password.isEmpty &&
                            port > 0
-        
-        // For new configurations, allow empty localDownloadPath and syncDirectories
+
+        // For new configurations, allow empty localSourcePath
         if isNewConfiguration {
             return hasCoreFields
         } else {
-            // For editing, require all fields
-            return hasCoreFields &&
-                   !localDownloadPath.isEmpty &&
-                   !syncDirectories.isEmpty &&
-                   syncDirectories.allSatisfy { !$0.isEmpty }
+            // For editing, require local source path
+            return hasCoreFields && !localSourcePath.isEmpty
         }
     }
-    
+
     private func saveConfiguration() {
         // Sync local state variables back to configuration object
         configuration.name = name
@@ -499,13 +457,12 @@ extension FTPConfigurationView {
         configuration.username = username
         configuration.password = password
         configuration.port = port
-        configuration.localDownloadPath = localDownloadPath
-        configuration.syncDirectories = syncDirectories
+        configuration.localSourcePath = localSourcePath
+        configuration.remoteDestination = remoteDestination
         configuration.respectFilePaths = respectFilePaths
-        configuration.downloadMode = downloadMode
         configuration.syncInterval = syncInterval
         configuration.stabilizationInterval = stabilizationInterval
-        configuration.downloadAggressiveness = downloadAggressiveness
+        configuration.uploadAggressiveness = uploadAggressiveness
         configuration.autoTuneAggressiveness = autoTuneAggressiveness
         configuration.runOnLaunch = runOnLaunch
 
@@ -516,19 +473,18 @@ extension FTPConfigurationView {
         print("   username: '\(configuration.username)'")
         print("   password: '\(configuration.password.isEmpty ? "empty" : "filled")'")
         print("   port: \(configuration.port)")
-        print("   localDownloadPath: '\(configuration.localDownloadPath)'")
-        print("   syncDirectories: \(configuration.syncDirectories)")
+        print("   localSourcePath: '\(configuration.localSourcePath)'")
+        print("   remoteDestination: \(configuration.remoteDestination)")
         print("   syncInterval: \(configuration.syncInterval)")
         print("   stabilizationInterval: \(configuration.stabilizationInterval)")
         print("   respectFilePaths: \(configuration.respectFilePaths)")
-        print("   downloadMode: \(configuration.downloadMode)")
-        print("   downloadAggressiveness: \(configuration.downloadAggressiveness)")
+        print("   uploadAggressiveness: \(configuration.uploadAggressiveness)")
         print("   autoTuneAggressiveness: \(configuration.autoTuneAggressiveness)")
         print("   runOnLaunch: \(configuration.runOnLaunch)")
 
         // The configuration object is already updated by the form bindings
         // The fix for @Published/Codable issues is now implemented in ContentView.saveConfigurations()
-        
+
         onSave(configuration)
         dismiss()
     }
@@ -539,7 +495,7 @@ extension FTPConfigurationView {
             let importedConfig = try JSONDecoder().decode(FTPConfig.self, from: data)
 
             print("🔍 Importing configuration:")
-            print("   Imported localDownloadPath: '\(importedConfig.localDownloadPath)'")
+            print("   Imported localSourcePath: '\(importedConfig.localSourcePath)'")
 
             // Update the configuration object directly
             configuration.name = importedConfig.name
@@ -547,15 +503,14 @@ extension FTPConfigurationView {
             configuration.username = importedConfig.username
             configuration.password = importedConfig.password
             configuration.port = importedConfig.port
-            // Always clear local download path on import - user must set their own
-            configuration.localDownloadPath = ""
+            // Always clear local source path on import - user must set their own
+            configuration.localSourcePath = ""
             configuration.directoryBookmark = nil
-            configuration.syncDirectories = importedConfig.syncDirectories.isEmpty ? ["/"] : importedConfig.syncDirectories
+            configuration.remoteDestination = importedConfig.remoteDestination.isEmpty ? "/" : importedConfig.remoteDestination
             configuration.syncInterval = importedConfig.syncInterval
             configuration.stabilizationInterval = importedConfig.stabilizationInterval
             configuration.respectFilePaths = importedConfig.respectFilePaths
-            configuration.downloadMode = importedConfig.downloadMode
-            configuration.downloadAggressiveness = importedConfig.downloadAggressiveness
+            configuration.uploadAggressiveness = importedConfig.uploadAggressiveness
             configuration.autoTuneAggressiveness = importedConfig.autoTuneAggressiveness
 
             // Also update local state variables to keep UI in sync
@@ -564,20 +519,19 @@ extension FTPConfigurationView {
             username = importedConfig.username
             password = importedConfig.password
             port = importedConfig.port
-            // Clear local download path - user must set their own
-            localDownloadPath = ""
-            syncDirectories = importedConfig.syncDirectories
+            // Clear local source path - user must set their own
+            localSourcePath = ""
+            remoteDestination = importedConfig.remoteDestination
             respectFilePaths = importedConfig.respectFilePaths
-            downloadMode = importedConfig.downloadMode
             syncInterval = importedConfig.syncInterval
             stabilizationInterval = importedConfig.stabilizationInterval
-            downloadAggressiveness = importedConfig.downloadAggressiveness
+            uploadAggressiveness = importedConfig.uploadAggressiveness
             autoTuneAggressiveness = importedConfig.autoTuneAggressiveness
 
             print("   ✅ Configuration imported successfully")
-            print("   📁 Local download path cleared - user must set their own")
+            print("   📁 Local source path cleared - user must set their own")
 
-            // Show alert reminding user to set local download directory
+            // Show alert reminding user to set local source directory
             showingImportAlert = true
 
         } catch {
@@ -660,26 +614,6 @@ extension FTPConfigurationView {
         }
     }
     
-    private func addSyncDirectory() {
-        let trimmed = newDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty && !syncDirectories.contains(trimmed) {
-            syncDirectories.append(trimmed)
-            newDirectory = ""
-        }
-    }
-    
-    private func removeSyncDirectory(_ directory: String) {
-        print("🔍 Removing sync directory: '\(directory)'")
-        print("   Before removal: \(syncDirectories)")
-        
-        // Simple array removal that should trigger SwiftUI updates
-        if let index = syncDirectories.firstIndex(of: directory) {
-            syncDirectories.remove(at: index)
-        }
-        
-        print("   After removal: \(syncDirectories)")
-    }
-    
     private func formatInterval(_ seconds: TimeInterval) -> String {
         if seconds == 0 {
             return "None"
@@ -693,17 +627,17 @@ extension FTPConfigurationView {
             return "\(hours)h"
         }
     }
-    
+
     private func openDirectoryPicker() {
         let panel = NSOpenPanel()
-        panel.prompt = "Choose Download Folder"
+        panel.prompt = "Choose Source Folder"
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true  // This enables the create folder button in the file picker
-        panel.message = "Select the folder where downloaded files will be saved"
+        panel.message = "Select the folder containing files to upload"
 
         print("🔍 Directory picker opened")
-        print("   Current localDownloadPath: '\(localDownloadPath)'")
+        print("   Current localSourcePath: '\(localSourcePath)'")
 
         if panel.runModal() == .OK, let selectedURL = panel.url {
             let newPath = selectedURL.path
@@ -722,15 +656,15 @@ extension FTPConfigurationView {
                 print("   ✅ Created and saved security-scoped bookmark (\(bookmarkData.count) bytes)")
 
                 // Update path
-                localDownloadPath = newPath
-                configuration.localDownloadPath = newPath
-                print("   Updated localDownloadPath: '\(localDownloadPath)'")
+                localSourcePath = newPath
+                configuration.localSourcePath = newPath
+                print("   Updated localSourcePath: '\(localSourcePath)'")
 
             } catch {
                 print("   ❌ Failed to create security-scoped bookmark: \(error)")
                 // Still update the path even if bookmark fails (for dev builds)
-                localDownloadPath = newPath
-                configuration.localDownloadPath = newPath
+                localSourcePath = newPath
+                configuration.localSourcePath = newPath
             }
         } else {
             print("   Directory picker cancelled")
@@ -875,13 +809,17 @@ struct FTPServerBrowserView: View {
     let username: String
     let password: String
     let port: String
-    @Binding var selectedDirectories: [String]
-    
+    @Binding var selectedDirectory: String
+
     @State private var isConnecting = false
     @State private var connectionError: String?
     @State private var serverDirectories: [String] = []
-    @State private var selectedPaths: Set<String> = []
-    
+    @State private var selectedPath: String = "/"
+    @State private var showCreateDirectory = false
+    @State private var newDirectoryName: String = ""
+    @State private var isCreatingDirectory = false
+    @State private var createDirectoryError: String?
+
     var body: some View {
         VStack(spacing: 20) {
             // Header
@@ -889,8 +827,8 @@ struct FTPServerBrowserView: View {
                 Text("FTP Server Browser")
                     .font(.title2)
                     .fontWeight(.semibold)
-                
-                Text("Select directories to monitor on \(serverAddress)")
+
+                Text("Select destination directory on \(serverAddress)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -941,31 +879,27 @@ struct FTPServerBrowserView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Available Directories")
                         .font(.headline)
-                    
+
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 8) {
                             ForEach(serverDirectories, id: \.self) { directory in
                                 HStack {
                                     Button(action: {
-                                        if selectedPaths.contains(directory) {
-                                            selectedPaths.remove(directory)
-                                        } else {
-                                            selectedPaths.insert(directory)
-                                        }
+                                        selectedPath = directory
                                     }) {
-                                        Image(systemName: selectedPaths.contains(directory) ? "checkmark.square.fill" : "square")
-                                            .foregroundColor(selectedPaths.contains(directory) ? .accentColor : .secondary)
+                                        Image(systemName: selectedPath == directory ? "largecircle.fill.circle" : "circle")
+                                            .foregroundColor(selectedPath == directory ? .accentColor : .secondary)
                                     }
                                     .buttonStyle(.plain)
-                                    
+
                                     Text(directory)
                                         .font(.system(.body, design: .monospaced))
-                                    
+
                                     Spacer()
                                 }
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.secondary.opacity(0.05))
+                                .background(selectedPath == directory ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.05))
                                 .cornerRadius(4)
                             }
                         }
@@ -976,26 +910,65 @@ struct FTPServerBrowserView: View {
             
             Spacer()
             
+            // Create directory section
+            if showCreateDirectory {
+                VStack(spacing: 12) {
+                    HStack {
+                        TextField("New directory name", text: $newDirectoryName)
+                            .textFieldStyle(.roundedBorder)
+
+                        Button(isCreatingDirectory ? "Creating..." : "Create") {
+                            createDirectory()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(newDirectoryName.isEmpty || isCreatingDirectory)
+
+                        Button("Cancel") {
+                            showCreateDirectory = false
+                            newDirectoryName = ""
+                            createDirectoryError = nil
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    if let error = createDirectoryError {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
+                .padding()
+                .background(Color.secondary.opacity(0.1))
+                .cornerRadius(8)
+            }
+
             // Footer buttons
             HStack(spacing: 16) {
                 Button("Cancel") {
                     dismiss()
                 }
                 .buttonStyle(.bordered)
-                
+
+                Button("New Directory") {
+                    showCreateDirectory.toggle()
+                    createDirectoryError = nil
+                }
+                .buttonStyle(.bordered)
+
                 Spacer()
-                
-                Button("Add Selected") {
-                    addSelectedDirectories()
+
+                Button("Select Directory") {
+                    selectedDirectory = selectedPath
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(selectedPaths.isEmpty)
+                .disabled(selectedPath.isEmpty)
             }
         }
         .padding(30)
         .frame(width: 600, height: 500)
         .onAppear {
+            selectedPath = selectedDirectory.isEmpty ? "/" : selectedDirectory
             connectToServer()
         }
     }
@@ -1019,24 +992,28 @@ struct FTPServerBrowserView: View {
                 
                 await MainActor.run {
                     isConnecting = false
-                    
+
                     if result.exitCode == 0 {
                         // Parse the directory listing using regex to extract only directories
                         let directories = extractDirectories(from: result.output)
                         let items = directories.map { "/\($0)" }
-                        
+
                         // Always include root and add found directories
                         var allDirectories = ["/"]
                         allDirectories.append(contentsOf: items)
-                        
+
                         serverDirectories = allDirectories
-                        
-                        // Pre-check directories that are already selected in the configuration
-                        selectedPaths = Set(selectedDirectories.filter { allDirectories.contains($0) })
-                        
+
+                        // Pre-select the currently selected directory if it exists
+                        if allDirectories.contains(selectedPath) {
+                            // Keep current selection
+                        } else {
+                            selectedPath = "/"
+                        }
+
                         print("FTP Browser: Found \(serverDirectories.count) items")
                         print("FTP Browser: Raw output: \(result.output)")
-                        print("FTP Browser: Pre-checked \(selectedPaths.count) already selected directories")
+                        print("FTP Browser: Selected path: \(selectedPath)")
                     } else {
                         connectionError = "Failed to connect to FTP server (exit code: \(result.exitCode)). Please check your credentials and try again."
                         print("FTP Browser: Connection failed with exit code \(result.exitCode)")
@@ -1051,15 +1028,57 @@ struct FTPServerBrowserView: View {
             }
         }
     }
-    
-    private func addSelectedDirectories() {
-        // Replace the entire selection with what's currently selected
-        // This ensures the UI reflects the actual user selection
-        selectedDirectories = Array(selectedPaths).sorted()
-        
-        print("FTP Browser: Updated selectedDirectories to: \(selectedDirectories)")
+
+    private func createDirectory() {
+        isCreatingDirectory = true
+        createDirectoryError = nil
+
+        // Build the full path for the new directory
+        let newDirPath = if selectedPath == "/" {
+            "/\(newDirectoryName)"
+        } else {
+            "\(selectedPath)/\(newDirectoryName)"
+        }
+
+        Task {
+            do {
+                // Use curl to create the directory via FTP MKD command
+                let result = try await executeCurlCommand([
+                    "-u", "\(username):\(password)",
+                    "ftp://\(serverAddress):\(port)/",
+                    "-Q", "MKD \(newDirPath)",
+                    "--connect-timeout", "10",
+                    "--max-time", "30",
+                    "--ftp-pasv"
+                ])
+
+                await MainActor.run {
+                    isCreatingDirectory = false
+
+                    if result.exitCode == 0 {
+                        // Success - add to list and select it
+                        if !serverDirectories.contains(newDirPath) {
+                            serverDirectories.append(newDirPath)
+                            serverDirectories.sort()
+                        }
+                        selectedPath = newDirPath
+                        showCreateDirectory = false
+                        newDirectoryName = ""
+                        print("FTP Browser: Created directory \(newDirPath)")
+                    } else {
+                        createDirectoryError = "Failed to create directory. It may already exist or you don't have permission."
+                        print("FTP Browser: Failed to create directory \(newDirPath), exit code: \(result.exitCode)")
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isCreatingDirectory = false
+                    createDirectoryError = "Error: \(error.localizedDescription)"
+                }
+            }
+        }
     }
-    
+
     // Extract directories using regex patterns for Unix and Windows FTP servers
     private func extractDirectories(from listing: String) -> [String] {
         let lines = listing.components(separatedBy: .newlines)

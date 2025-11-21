@@ -145,7 +145,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem(title: "Show Main Window", action: #selector(showMainWindow), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit FTP Downloader", action: #selector(quitApp), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "Quit FTP Uploader", action: #selector(quitApp), keyEquivalent: "q"))
 
         statusItem?.menu = menu
         statusItem?.button?.performClick(nil)
@@ -161,7 +161,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Look for existing main window
         var foundWindow = false
         for window in NSApplication.shared.windows {
-            if window.title == "FTP Downloader" || window.identifier?.rawValue == "main" {
+            if window.title == "FTP Uploader" || window.identifier?.rawValue == "main" {
                 print("🪟 Found existing main window, bringing to front")
                 window.makeKeyAndOrderFront(nil)
                 window.orderFrontRegardless()
@@ -191,7 +191,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Configs exist - hide the main window to go into menu bar-only mode
         print("🪟 Found \(configs.count) configuration(s) - hiding main window for menu bar-only mode")
         for window in NSApplication.shared.windows {
-            if window.title == "FTP Downloader" || window.identifier?.rawValue == "main" {
+            if window.title == "FTP Uploader" || window.identifier?.rawValue == "main" {
                 print("🪟 Hiding main window - app will run in menu bar only")
                 window.orderOut(nil)
                 break
@@ -256,7 +256,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 let config = NSImage.SymbolConfiguration(pointSize: 0, weight: .regular)
                     .applying(.init(paletteColors: [symbolColor]))
-                if let image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: "FTP Downloader") {
+                if let image = NSImage(systemSymbolName: "arrow.up.circle.fill", accessibilityDescription: "FTP Uploader") {
                     button.image = image.withSymbolConfiguration(config)
                 }
             }
@@ -791,7 +791,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct FTPDownloaderApp: App {
+struct FTPUploaderApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     @State private var colorScheme: ColorScheme? = nil
@@ -807,7 +807,7 @@ struct FTPDownloaderApp: App {
         // This ensures we capture ALL output from the very start of the app
         OutputCapture.shared.startCapturing()
 
-        print("✅ FTPDownloaderApp initializing")
+        print("✅ FTPUploaderApp initializing")
         print("ℹ️  Configurations marked with 'runOnLaunch' will start automatically")
 
         // CRITICAL: Create singleton FileSyncManager ONCE at app startup
@@ -825,7 +825,7 @@ struct FTPDownloaderApp: App {
         // Setup signal handlers (AppDelegate is now automatically set up by SwiftUI)
         setupSignalHandlers()
 
-        print("✅ FTPDownloaderApp initialization complete")
+        print("✅ FTPUploaderApp initialization complete")
     }
     
     var body: some Scene {
@@ -835,7 +835,7 @@ struct FTPDownloaderApp: App {
         }()
 
         // Main window (hidden by default - menu bar app)
-        return WindowGroup("FTP Downloader", id: "main") {
+        return WindowGroup("FTP Uploader", id: "main") {
             Group {
                 // Show loading state while checking purchase status
                 if BuildType.current.showPurchaseUI && storeManager.isCheckingPurchaseStatus {
@@ -892,7 +892,7 @@ struct FTPDownloaderApp: App {
             CommandGroup(replacing: .toolbar) { }
 
             CommandGroup(replacing: .appInfo) {
-                Button("About FTP Downloader") {
+                Button("About FTP Uploader") {
                     showCustomAboutPanel()
                 }
 
@@ -936,7 +936,7 @@ struct FTPDownloaderApp: App {
             }
 
             CommandGroup(replacing: .help) {
-                Button("FTP Downloader Help") {
+                Button("FTP Uploader Help") {
                     helpManager.openHelp()
                 }
                 .keyboardShortcut("?", modifiers: [.command])
@@ -959,7 +959,7 @@ struct FTPDownloaderApp: App {
     }
     
     private func setupLogging() {
-        print("🚀 FTP Downloader Starting...")
+        print("🚀 FTP Uploader Starting...")
         print("📱 App Version: \(getAppVersion())")
         print("🏗️  Build Date: \(getBuildDate())")
         print("🖥️  Platform: macOS")
@@ -1008,7 +1008,7 @@ struct FTPDownloaderApp: App {
     
     private func showCustomAboutPanel() {
         let alert = NSAlert()
-        alert.messageText = "About FTP Downloader"
+        alert.messageText = "About FTP Uploader"
         alert.informativeText = """
         Version \(getAppVersion())
 

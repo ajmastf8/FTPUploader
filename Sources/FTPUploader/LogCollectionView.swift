@@ -286,7 +286,7 @@ struct LogCollectionView: View {
 
     private func createEmailSubject() -> String {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
-        return "FTP Downloader Support Request - \(appVersion) - \(Date().formatted(date: .abbreviated, time: .shortened))"
+        return "FTP Uploader Support Request - \(appVersion) - \(Date().formatted(date: .abbreviated, time: .shortened))"
     }
 
     private func createEmailBody(logFileName: String) -> String {

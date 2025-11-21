@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# FTP Downloader Development Build
+# FTP Uploader Development Build
 # Builds development version - no expiration, shows trial UI for testing
 # Output: build/dev/
 #
@@ -14,19 +14,19 @@ set -e
 TEST_EXPIRED=false
 if [ "$1" = "--test-expired" ]; then
     TEST_EXPIRED=true
-    echo "🍎 FTP Downloader Development Build (TEST EXPIRED TRIAL)"
-    echo "========================================================="
+    echo "🍎 FTP Uploader Development Build (TEST EXPIRED TRIAL)"
+    echo "======================================================="
     echo "⚠️  Purchase UI enabled with expired trial for testing"
 else
-    echo "🍎 FTP Downloader Development Build"
-    echo "===================================="
+    echo "🍎 FTP Uploader Development Build"
+    echo "=================================="
 fi
 echo "📂 Output: build/dev/"
 echo ""
 
 # Check if we're in the right directory
 if [ ! -f "Package.swift" ]; then
-    echo "❌ Error: Package.swift not found. Please run this script from the FTPDownloader project root."
+    echo "❌ Error: Package.swift not found. Please run this script from the FTPUploader project root."
     exit 1
 fi
 
@@ -97,10 +97,10 @@ fi
 
 # Create build directory
 BUILD_DIR="build/dev"
-APP_NAME="FTPDownloader.app"
+APP_NAME="FTPUploader.app"
 APP_PATH="$BUILD_DIR/$APP_NAME"
 
-echo "📦 Building FTP Downloader (Development Build)..."
+echo "📦 Building FTP Uploader (Development Build)..."
 echo ""
 
 # Clean previous dev builds
@@ -129,8 +129,8 @@ if [ $? -eq 0 ]; then
     mkdir -p "$APP_PATH/Contents/Resources"
 
     # Copy the Swift binary (now contains statically-linked Rust code)
-    cp .build/release/FTPDownloader "$APP_PATH/Contents/MacOS/"
-    chmod +x "$APP_PATH/Contents/MacOS/FTPDownloader"
+    cp .build/release/FTPUploader "$APP_PATH/Contents/MacOS/"
+    chmod +x "$APP_PATH/Contents/MacOS/FTPUploader"
 
     echo "✅ Swift executable copied (with embedded Rust FFI library)"
 
@@ -157,8 +157,8 @@ if [ $? -eq 0 ]; then
     fi
 
     # Copy Help resources from SPM bundle
-    if [ -d ".build/arm64-apple-macosx/release/FTPDownloader_FTPDownloader.bundle/Help" ]; then
-        cp -r ".build/arm64-apple-macosx/release/FTPDownloader_FTPDownloader.bundle/Help" "$APP_PATH/Contents/Resources/"
+    if [ -d ".build/arm64-apple-macosx/release/FTPUploader_FTPUploader.bundle/Help" ]; then
+        cp -r ".build/arm64-apple-macosx/release/FTPUploader_FTPUploader.bundle/Help" "$APP_PATH/Contents/Resources/"
         echo "✅ Help resources copied to bundle"
     fi
 
@@ -176,11 +176,11 @@ if [ $? -eq 0 ]; then
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>FTPDownloader</string>
+    <string>FTPUploader</string>
     <key>CFBundleIdentifier</key>
-    <string>com.roningroupinc.FTPDownloader</string>
+    <string>com.roningroupinc.FTPUploader</string>
     <key>CFBundleName</key>
-    <string>FTP Downloader</string>
+    <string>FTP Uploader</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -223,17 +223,17 @@ INFOPLIST
     DEVELOPER_ID=$(security find-identity -p codesigning -v | grep "Developer ID Application" | head -1 | sed -E 's/^.*"(.+)"$/\1/')
     if [ -n "$DEVELOPER_ID" ]; then
         echo "   Using Developer ID: $DEVELOPER_ID"
-        codesign --force --sign "$DEVELOPER_ID" --entitlements Sources/FTPDownloader/FTPDownloader.entitlements --options runtime "$APP_PATH" 2>&1 | grep -v "replacing existing signature" || true
+        codesign --force --sign "$DEVELOPER_ID" --entitlements Sources/FTPUploader/FTPUploader.entitlements --options runtime "$APP_PATH" 2>&1 | grep -v "replacing existing signature" || true
         echo "✅ App signed with Developer ID (hardened runtime)"
     else
         echo "   No Developer ID found, using ad-hoc signature"
-        codesign --force --sign - --entitlements Sources/FTPDownloader/FTPDownloader.entitlements "$APP_PATH" 2>&1 | grep -v "replacing existing signature" || true
+        codesign --force --sign - --entitlements Sources/FTPUploader/FTPUploader.entitlements "$APP_PATH" 2>&1 | grep -v "replacing existing signature" || true
         echo "✅ App signed (ad-hoc with entitlements)"
     fi
 
     # Verify the app bundle
     echo "🔍 Verifying app bundle..."
-    if [ -d "$APP_PATH" ] && [ -f "$APP_PATH/Contents/MacOS/FTPDownloader" ]; then
+    if [ -d "$APP_PATH" ] && [ -f "$APP_PATH/Contents/MacOS/FTPUploader" ]; then
         echo "✅ App bundle verified successfully"
         echo ""
         echo "🚀 Ready to launch with: ./launch_app.sh"

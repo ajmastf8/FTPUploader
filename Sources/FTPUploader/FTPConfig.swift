@@ -7,8 +7,8 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
     @Published var username: String
     @Published var password: String
     @Published var port: Int
-    @Published var localDownloadPath: String
-    @Published var syncDirectories: [String]
+    @Published var localSourcePath: String  // Local directory to monitor for files to upload
+    @Published var remoteDestination: String  // Remote FTP directory to upload to
     @Published var syncInterval: TimeInterval
     @Published var stabilizationInterval: TimeInterval
     @Published var lastSyncDate: Date?
@@ -18,21 +18,20 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
     var directoryBookmark: Data?
 
     // File handling options
-    @Published var respectFilePaths: Bool = true  // Maintain directory structure in local download
-    @Published var downloadMode: DownloadMode = .deleteAfterDownload  // Download and Delete vs Download and Keep
-    
-    // Download performance options
-    @Published var downloadAggressiveness: DownloadAggressiveness = .moderate
+    @Published var respectFilePaths: Bool = true  // Maintain directory structure in upload
+
+    // Upload performance options
+    @Published var uploadAggressiveness: UploadAggressiveness = .moderate
     @Published var autoTuneAggressiveness: Bool = true  // Enable/disable automatic aggressiveness tuning
-    
+
     // Server-specific options
     @Published var serverBanner: String = ""     // Store server banner for detection
-    
+
     // Connection and performance tracking
     @Published var connectionStartTime: Date?
-    @Published var lastDownloadSpeed: Double = 0.0 // bytes per second
-    @Published var lastDownloadedFile: String = ""
-    @Published var lastDownloadTime: Date?
+    @Published var lastUploadSpeed: Double = 0.0 // bytes per second
+    @Published var lastUploadedFile: String = ""
+    @Published var lastUploadTime: Date?
     
     // Session tracking
     @Published var sessionId: String = ""
@@ -45,8 +44,8 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
     static let syncIntervalLabels = ["0.1s", "0.5s", "1s", "5s", "15s", "30s", "1hr", "2hr"]
     
     // Predefined stabilization interval options
-    static let stabilizationIntervalOptions: [TimeInterval] = [0, 5, 15, 30, 60] // None, 5s, 15s, 30s, 1min
-    static let stabilizationIntervalLabels = ["None", "5s", "15s", "30s", "1min"]
+    static let stabilizationIntervalOptions: [TimeInterval] = [0, 1, 5, 15, 30, 60] // None, 1s, 5s, 15s, 30s, 1min
+    static let stabilizationIntervalLabels = ["None", "1s", "5s", "15s", "30s", "1min"]
 
     // Helper to get recommended stabilization interval based on sync interval
     var recommendedStabilizationInterval: TimeInterval {
@@ -70,27 +69,25 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
         self.username = ""
         self.password = ""
         self.port = 21
-        self.localDownloadPath = ""
-        self.syncDirectories = []
+        self.localSourcePath = ""
+        self.remoteDestination = "/"
         self.syncInterval = 1 // 1 second default (much faster than 5s)
         self.stabilizationInterval = 0 // 0 seconds default (no stabilization for fast sync)
-        self.downloadMode = .deleteAfterDownload // Default to delete after download
-        self.downloadAggressiveness = .moderate // Default to moderate aggressiveness
+        self.uploadAggressiveness = .moderate // Default to moderate aggressiveness
         self.autoTuneAggressiveness = true // Default to auto-tuning enabled
     }
-    
+
     init(name: String, serverAddress: String, username: String, password: String, port: Int = 21) {
         self.name = name
         self.serverAddress = serverAddress
         self.username = username
         self.password = password
         self.port = port
-        self.localDownloadPath = ""
-        self.syncDirectories = []
+        self.localSourcePath = ""
+        self.remoteDestination = "/"
         self.syncInterval = 1 // 1 second default (much faster than 5s)
         self.stabilizationInterval = 5 // 5 seconds default (changed from 0)
-        self.downloadMode = .deleteAfterDownload // Default to delete after download
-        self.downloadAggressiveness = .moderate // Default to moderate aggressiveness
+        self.uploadAggressiveness = .moderate // Default to moderate aggressiveness
         self.autoTuneAggressiveness = true // Default to auto-tuning enabled
     }
     
@@ -101,12 +98,7 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
         case failed = "Connection Failed"
     }
     
-    enum DownloadMode: String, Codable, CaseIterable {
-        case deleteAfterDownload = "delete"
-        case keepAfterDownload = "keep"
-    }
-    
-    enum DownloadAggressiveness: Int, Codable, CaseIterable {
+    enum UploadAggressiveness: Int, Codable, CaseIterable {
         case conservative = 3
         case moderate = 10
         case aggressive = 20
@@ -114,7 +106,7 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
         case maximum = 100
         case ultra = 150
         case extreme_max = 200
-        
+
         var displayName: String {
             switch self {
             case .conservative: return "Conservative (3 connections)"
@@ -126,7 +118,7 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
             case .extreme_max: return "Extreme Max (200 connections)"
             }
         }
-        
+
         var shortName: String {
             switch self {
             case .conservative: return "Conservative"
@@ -138,7 +130,7 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
             case .extreme_max: return "Extreme Max"
             }
         }
-        
+
         var connectionCount: Int {
             return self.rawValue
         }
@@ -182,13 +174,13 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
     
     // MARK: - Codable Implementation for @Published properties
     enum CodingKeys: String, CodingKey {
-        case id, name, serverAddress, username, password, port, localDownloadPath, syncDirectories
+        case id, name, serverAddress, username, password, port, localSourcePath, remoteDestination
         case syncInterval, stabilizationInterval, lastSyncDate, connectionStatus
-        case respectFilePaths, downloadMode, downloadAggressiveness, autoTuneAggressiveness, serverBanner, connectionStartTime
-        case lastDownloadSpeed, lastDownloadedFile, lastDownloadTime, sessionId
+        case respectFilePaths, uploadAggressiveness, autoTuneAggressiveness, serverBanner, connectionStartTime
+        case lastUploadSpeed, lastUploadedFile, lastUploadTime, sessionId
         case directoryBookmark, runOnLaunch
     }
-    
+
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
@@ -197,26 +189,25 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
         username = try container.decode(String.self, forKey: .username)
         password = try container.decode(String.self, forKey: .password)
         port = try container.decode(Int.self, forKey: .port)
-        localDownloadPath = try container.decode(String.self, forKey: .localDownloadPath)
-        syncDirectories = try container.decode([String].self, forKey: .syncDirectories)
+        localSourcePath = try container.decode(String.self, forKey: .localSourcePath)
+        remoteDestination = try container.decode(String.self, forKey: .remoteDestination)
         syncInterval = try container.decode(TimeInterval.self, forKey: .syncInterval)
         stabilizationInterval = try container.decode(TimeInterval.self, forKey: .stabilizationInterval)
         lastSyncDate = try container.decodeIfPresent(Date.self, forKey: .lastSyncDate)
         connectionStatus = try container.decode(ConnectionStatus.self, forKey: .connectionStatus)
         respectFilePaths = try container.decode(Bool.self, forKey: .respectFilePaths)
-        downloadMode = try container.decode(DownloadMode.self, forKey: .downloadMode)
-        downloadAggressiveness = try container.decodeIfPresent(DownloadAggressiveness.self, forKey: .downloadAggressiveness) ?? .moderate
+        uploadAggressiveness = try container.decodeIfPresent(UploadAggressiveness.self, forKey: .uploadAggressiveness) ?? .moderate
         autoTuneAggressiveness = try container.decodeIfPresent(Bool.self, forKey: .autoTuneAggressiveness) ?? true
         serverBanner = try container.decode(String.self, forKey: .serverBanner)
         connectionStartTime = try container.decodeIfPresent(Date.self, forKey: .connectionStartTime)
-        lastDownloadSpeed = try container.decode(Double.self, forKey: .lastDownloadSpeed)
-        lastDownloadedFile = try container.decode(String.self, forKey: .lastDownloadedFile)
-        lastDownloadTime = try container.decodeIfPresent(Date.self, forKey: .lastDownloadTime)
+        lastUploadSpeed = try container.decode(Double.self, forKey: .lastUploadSpeed)
+        lastUploadedFile = try container.decode(String.self, forKey: .lastUploadedFile)
+        lastUploadTime = try container.decodeIfPresent(Date.self, forKey: .lastUploadTime)
         sessionId = try container.decodeIfPresent(String.self, forKey: .sessionId) ?? ""
         directoryBookmark = try container.decodeIfPresent(Data.self, forKey: .directoryBookmark)
         runOnLaunch = try container.decodeIfPresent(Bool.self, forKey: .runOnLaunch) ?? false
     }
-    
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
@@ -225,21 +216,20 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
         try container.encode(username, forKey: .username)
         try container.encode(password, forKey: .password)
         try container.encode(port, forKey: .port)
-        try container.encode(localDownloadPath, forKey: .localDownloadPath)
-        try container.encode(syncDirectories, forKey: .syncDirectories)
+        try container.encode(localSourcePath, forKey: .localSourcePath)
+        try container.encode(remoteDestination, forKey: .remoteDestination)
         try container.encode(syncInterval, forKey: .syncInterval)
         try container.encode(stabilizationInterval, forKey: .stabilizationInterval)
         try container.encodeIfPresent(lastSyncDate, forKey: .lastSyncDate)
         try container.encode(connectionStatus, forKey: .connectionStatus)
         try container.encode(respectFilePaths, forKey: .respectFilePaths)
-        try container.encode(downloadMode, forKey: .downloadMode)
-        try container.encode(downloadAggressiveness, forKey: .downloadAggressiveness)
+        try container.encode(uploadAggressiveness, forKey: .uploadAggressiveness)
         try container.encode(autoTuneAggressiveness, forKey: .autoTuneAggressiveness)
         try container.encode(serverBanner, forKey: .serverBanner)
         try container.encodeIfPresent(connectionStartTime, forKey: .connectionStartTime)
-        try container.encode(lastDownloadSpeed, forKey: .lastDownloadSpeed)
-        try container.encode(lastDownloadedFile, forKey: .lastDownloadedFile)
-        try container.encodeIfPresent(lastDownloadTime, forKey: .lastDownloadTime)
+        try container.encode(lastUploadSpeed, forKey: .lastUploadSpeed)
+        try container.encode(lastUploadedFile, forKey: .lastUploadedFile)
+        try container.encodeIfPresent(lastUploadTime, forKey: .lastUploadTime)
         try container.encode(sessionId, forKey: .sessionId)
         try container.encodeIfPresent(directoryBookmark, forKey: .directoryBookmark)
         try container.encode(runOnLaunch, forKey: .runOnLaunch)
@@ -257,21 +247,20 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
         copy.username = self.username
         copy.password = self.password
         copy.port = self.port
-        copy.localDownloadPath = self.localDownloadPath
-        copy.syncDirectories = self.syncDirectories
+        copy.localSourcePath = self.localSourcePath
+        copy.remoteDestination = self.remoteDestination
         copy.syncInterval = self.syncInterval
         copy.stabilizationInterval = self.stabilizationInterval
         copy.lastSyncDate = self.lastSyncDate
         copy.connectionStatus = self.connectionStatus
         copy.respectFilePaths = self.respectFilePaths
-        copy.downloadMode = self.downloadMode
-        copy.downloadAggressiveness = self.downloadAggressiveness
+        copy.uploadAggressiveness = self.uploadAggressiveness
         copy.autoTuneAggressiveness = self.autoTuneAggressiveness
         copy.serverBanner = self.serverBanner
         copy.connectionStartTime = self.connectionStartTime
-        copy.lastDownloadSpeed = self.lastDownloadSpeed
-        copy.lastDownloadedFile = self.lastDownloadedFile
-        copy.lastDownloadTime = self.lastDownloadTime
+        copy.lastUploadSpeed = self.lastUploadSpeed
+        copy.lastUploadedFile = self.lastUploadedFile
+        copy.lastUploadTime = self.lastUploadTime
         copy.sessionId = self.sessionId
         copy.directoryBookmark = self.directoryBookmark
         copy.runOnLaunch = self.runOnLaunch
@@ -297,19 +286,19 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
                              bookmarkDataIsStale: &isStale)
 
             if isStale {
-                print("⚠️ Security-scoped bookmark is stale for: \(localDownloadPath)")
+                print("⚠️ Security-scoped bookmark is stale for: \(localSourcePath)")
                 // TODO: Could prompt user to reselect directory
             }
 
             if url.startAccessingSecurityScopedResource() {
-                print("✅ Started accessing security-scoped directory: \(localDownloadPath)")
+                print("✅ Started accessing security-scoped directory: \(localSourcePath)")
                 return true
             } else {
-                print("❌ Failed to access security-scoped directory: \(localDownloadPath)")
+                print("❌ Failed to access security-scoped directory: \(localSourcePath)")
                 return false
             }
         } catch {
-            print("❌ Error resolving bookmark for \(localDownloadPath): \(error)")
+            print("❌ Error resolving bookmark for \(localSourcePath): \(error)")
             return false
         }
     }
@@ -325,7 +314,7 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
                              relativeTo: nil,
                              bookmarkDataIsStale: &isStale)
             url.stopAccessingSecurityScopedResource()
-            print("✅ Stopped accessing security-scoped directory: \(localDownloadPath)")
+            print("✅ Stopped accessing security-scoped directory: \(localSourcePath)")
         } catch {
             print("⚠️ Error stopping access to directory: \(error)")
         }

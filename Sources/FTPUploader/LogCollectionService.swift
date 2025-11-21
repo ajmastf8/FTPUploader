@@ -40,7 +40,7 @@ class LogCollectionService: ObservableObject {
         let header = """
 
         \(String(repeating: "═", count: 80))
-                            🚀 FTP DOWNLOADER DIAGNOSTIC LOG
+                            🚀 FTP UPLOADER DIAGNOSTIC LOG
         \(String(repeating: "═", count: 80))
 
         📋 DIAGNOSTIC REPORT DETAILS
@@ -161,13 +161,13 @@ class LogCollectionService: ObservableObject {
                     continue
                 }
 
-                // Filter for FTP Downloader app logs
-                if logEntry.subsystem.contains("FTPDownloader") ||
-                   logEntry.category.contains("FTPDownloader") ||
+                // Filter for FTP Uploader app logs
+                if logEntry.subsystem.contains("FTPUploader") ||
+                   logEntry.category.contains("FTPUploader") ||
                    logEntry.composedMessage.contains("FTP") ||
                    logEntry.composedMessage.contains("Rust") ||
                    logEntry.composedMessage.contains("Config") ||
-                   logEntry.composedMessage.contains("Download") ||
+                   logEntry.composedMessage.contains("Upload") ||
                    logEntry.composedMessage.contains("Sync") ||
                    logEntry.composedMessage.contains("🚀") || // Our emoji markers
                    logEntry.composedMessage.contains("🔧") ||
@@ -207,7 +207,7 @@ class LogCollectionService: ObservableObject {
 
             if logEntries.isEmpty {
                 return """
-                No relevant FTP Downloader log entries found for the specified criteria.
+                No relevant FTP Uploader log entries found for the specified criteria.
 
                 This may be normal if:
                 • The app was recently started and hasn't generated logs yet
@@ -291,7 +291,7 @@ class LogCollectionService: ObservableObject {
         Process ID:      \(processInfo.processIdentifier)
         Hostname:        \(processInfo.hostName)
 
-        🚀 FTP DOWNLOADER APPLICATION INFO
+        🚀 FTP UPLOADER APPLICATION INFO
         \(String(repeating: "─", count: 50))
         App Bundle ID:   \(Bundle.main.bundleIdentifier ?? "Unknown")
         Build Date:      \(getBuildDate())
@@ -355,7 +355,7 @@ class LogCollectionService: ObservableObject {
         dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         let timestamp = dateFormatter.string(from: Date())
 
-        let fileName = "FTPDownloader_Log_\(timestamp).txt"
+        let fileName = "FTPUploader_Log_\(timestamp).txt"
         let desktopURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
 
         guard let desktopURL = desktopURL else { return nil }
@@ -387,7 +387,7 @@ class LogCollectionService: ObservableObject {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         let timestamp = dateFormatter.string(from: Date())
-        return "FTPDownloader_Log_\(timestamp).txt"
+        return "FTPUploader_Log_\(timestamp).txt"
     }
 
     // Helper function to get current configuration info
@@ -411,10 +411,10 @@ class LogCollectionService: ObservableObject {
             for (index, config) in configs.enumerated() {
                 configInfo += "🔧 Configuration #\(index + 1): \"\(config.name)\"\n"
                 configInfo += "   📡 Server:        \(config.serverAddress):\(config.port)\n"
-                configInfo += "   📁 Local Path:    \(config.localDownloadPath)\n"
-                configInfo += "   📂 Remote Dirs:   \(config.syncDirectories.joined(separator: ", "))\n"
-                configInfo += "   ⚡ Performance:   \(config.downloadAggressiveness.displayName)\n"
-                configInfo += "   🗂️ Mode:          \(config.downloadMode == .deleteAfterDownload ? "Delete After Download" : "Keep After Download")\n"
+                configInfo += "   📁 Local Path:    \(config.localSourcePath)\n"
+                configInfo += "   📤 Remote Dest:   \(config.remoteDestination)\n"
+                configInfo += "   ⚡ Performance:   \(config.uploadAggressiveness.displayName)\n"
+                configInfo += "   🗂️ Mode:          Move to FTPU-Sent\n"
                 configInfo += "   ⏱️ Sync Interval: \(config.syncInterval)s\n"
                 configInfo += "   🔄 Stabilization: \(config.stabilizationInterval)s\n"
                 configInfo += "\n"
@@ -550,10 +550,10 @@ class LogCollectionService: ObservableObject {
             let output = String(data: data, encoding: .utf8) ?? ""
 
             let lines = output.components(separatedBy: .newlines)
-            let ftpProcesses = lines.filter { $0.contains("rust_ftp") || $0.contains("FTPDownloader") }
+            let ftpProcesses = lines.filter { $0.contains("rust_ftp") || $0.contains("FTPUploader") }
 
             if ftpProcesses.isEmpty {
-                processInfo += "ℹ️ No active FTP Downloader processes found.\n"
+                processInfo += "ℹ️ No active FTP Uploader processes found.\n"
                 processInfo += "💡 This might explain why FTP operations aren't working.\n\n"
             } else {
                 processInfo += "🔍 Active FTP-related processes found: \(ftpProcesses.count)\n\n"
