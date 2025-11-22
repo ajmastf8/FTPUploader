@@ -2,26 +2,26 @@
 import PackageDescription
 
 let package = Package(
-    name: "FTPUploader",
+    name: "FTPSender",
     platforms: [
         .macOS(.v14)
     ],
     products: [
         .executable(
-            name: "FTPUploader",
-            targets: ["FTPUploader"]
+            name: "FTPSender",
+            targets: ["FTPSender"]
         )
     ],
     dependencies: [
     ],
     targets: [
         .executableTarget(
-            name: "FTPUploader",
+            name: "FTPSender",
             dependencies: [],
-            path: "Sources/FTPUploader",
+            path: "Sources/FTPSender",
             resources: [
                 .copy("Help"),
-                .copy("FTPUploader.storekit")
+                .copy("FTPSender.storekit")
             ],
             cSettings: [
                 // Import bridging header for Rust FFI
@@ -31,7 +31,7 @@ let package = Package(
             linkerSettings: [
                 // Link Rust static library
                 .unsafeFlags([
-                    "-L/Users/ajmast/Development/GitHub/FTPUploader/RustFTP/target/release",
+                    "-L/Users/ajmast/Development/GitHub/FTPSender/RustFTP/target/release",
                     "-lrust_ftp",
                     // Required system frameworks for Rust dependencies
                     "-framework", "Security",

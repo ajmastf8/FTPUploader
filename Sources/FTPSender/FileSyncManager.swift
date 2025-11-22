@@ -467,7 +467,7 @@ class FileSyncManager: ObservableObject {
         print("🧹 Clearing notification files on disk for config: \(configId)")
         
         let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let ftpDir = appSupportDir.appendingPathComponent("FTPUploader")
+        let ftpDir = appSupportDir.appendingPathComponent("FTPSender")
         let notificationFile = ftpDir.appendingPathComponent("notifications_\(configId.uuidString).json")
         
         do {
@@ -495,8 +495,8 @@ class FileSyncManager: ObservableObject {
         print("🧹 Clearing all notification files on disk")
         
         let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let ftpDir = appSupportDir.appendingPathComponent("FTPUploader")
-        
+        let ftpDir = appSupportDir.appendingPathComponent("FTPSender")
+
         do {
             let fileURLs = try FileManager.default.contentsOfDirectory(at: ftpDir, includingPropertiesForKeys: nil)
             let notificationFiles = fileURLs.filter { $0.lastPathComponent.hasPrefix("notifications_") && $0.lastPathComponent.hasSuffix(".json") }
@@ -977,9 +977,9 @@ class FileSyncManager: ObservableObject {
                 // Update menu bar icon if needed
                 NotificationCenter.default.post(name: NSNotification.Name("SyncStatusChanged"), object: nil)
             }
-        } else if cleanMessage.contains("Multiple FTPUploaders detected") ||
-           cleanMessage.contains("Another FTPUploader detected") ||
-           cleanMessage.contains("Other FTPUploaders detected") {
+        } else if cleanMessage.contains("Multiple FTP Senders detected") ||
+           cleanMessage.contains("Another FTP Sender detected") ||
+           cleanMessage.contains("Other FTP Senders detected") {
 
             // Determine severity based on content
             let level: String

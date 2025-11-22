@@ -22,7 +22,7 @@ echo "====================================="
 
 # Check if we're in the right directory
 if [ ! -f "Package.swift" ]; then
-    echo "❌ Error: Package.swift not found. Please run this script from the FTPUploader project root."
+    echo "❌ Error: Package.swift not found. Please run this script from the FTPSender project root."
     exit 1
 fi
 
@@ -33,7 +33,7 @@ BETA_DIR="$BASE_BUILD_DIR/beta"
 APP_NAME="FTPSender.app"
 
 # Get current version from Info.plist
-INFO_PLIST="Sources/FTPUploader/Info.plist"
+INFO_PLIST="Sources/FTPSender/Info.plist"
 CURRENT_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$INFO_PLIST" 2>/dev/null || echo "1.0.1")
 
 # Function to archive existing builds before creating new one
@@ -276,8 +276,8 @@ else
 fi
 
 # Copy the Swift binary
-cp .build/release/FTPUploader "$APP_PATH/Contents/MacOS/"
-chmod +x "$APP_PATH/Contents/MacOS/FTPUploader"
+cp .build/release/FTPSender "$APP_PATH/Contents/MacOS/"
+chmod +x "$APP_PATH/Contents/MacOS/FTPSender"
 
 # Copy resources
 if [ -f "app-icon.icns" ]; then
@@ -307,7 +307,7 @@ cat > "$APP_PATH/Contents/Info.plist" << EOF
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>FTPUploader</string>
+    <string>FTPSender</string>
     <key>CFBundleIdentifier</key>
     <string>com.roningroupinc.ftpsender</string>
     <key>CFBundleName</key>
@@ -343,7 +343,7 @@ echo ""
 echo "🔐 Code signing executables for App Store..."
 PROJECT_DIR="$(pwd)"
 SIGNING_CERT="Apple Distribution: Ronin Group Inc. (6X7BH7FLQ8)"
-APP_ENTITLEMENTS="$PROJECT_DIR/Sources/FTPUploader/FTPUploader.entitlements"
+APP_ENTITLEMENTS="$PROJECT_DIR/Sources/FTPSender/FTPSender.entitlements"
 
 # Clean up any extended attributes and resource forks that can cause signing issues
 echo "🧹 Cleaning up extended attributes..."
@@ -352,14 +352,14 @@ find "$APP_PATH" -type f -name "._*" -delete
 find "$APP_PATH" -type f -name ".DS_Store" -delete
 
 # Sign the main executable with entitlements and identifier
-echo "📱 Signing FTPUploader with entitlements..."
+echo "📱 Signing FTPSender with entitlements..."
 codesign --force --sign "$SIGNING_CERT" \
     --entitlements "$APP_ENTITLEMENTS" \
     --identifier "com.roningroupinc.ftpsender" \
     --options runtime \
     --timestamp \
-    "$APP_PATH/Contents/MacOS/FTPUploader"
-echo "  ✅ FTPUploader signed"
+    "$APP_PATH/Contents/MacOS/FTPSender"
+echo "  ✅ FTPSender signed"
 
 # Sign the entire app bundle with identifier
 echo "📦 Signing app bundle..."

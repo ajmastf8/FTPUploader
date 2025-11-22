@@ -117,8 +117,8 @@ class RustFTPBridge {
         // Set FTP_DATA_DIR environment variable for database storage
         // For sandboxed apps, use Application Support directory in the container
         let dataDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("FTPUploader")
-            .path ?? "\(tempDir)/FTPUploader"
+            .appendingPathComponent("FTPSender")
+            .path ?? "\(tempDir)/FTPSender"
 
         // Create data directory if it doesn't exist
         try? FileManager.default.createDirectory(atPath: dataDir, withIntermediateDirectories: true)

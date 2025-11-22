@@ -10,6 +10,7 @@ class DemoModeManager: ObservableObject {
     @Published var demoConfig: FTPConfig?
 
     private var demoDirectoryURL: URL?
+    private var demoSentDirectoryURL: URL?
     private var demoImagesCreated: [URL] = []
     private var statsTimer: Timer?
     private var liveNotificationTimer: Timer?
@@ -35,13 +36,18 @@ class DemoModeManager: ObservableObject {
         // Clear any existing demo images first
         clearExistingDemoImages()
 
-        // Create demo directory
+        // Create demo directories (source and sent)
         if let demoDir = createDemoDirectory() {
             demoDirectoryURL = demoDir
             print("✅ Created demo directory: \(demoDir.path)")
         }
 
-        // Create demo images in the app bundle resources area (simulating FTP server)
+        if let sentDir = createDemoSentDirectory() {
+            demoSentDirectoryURL = sentDir
+            print("✅ Created demo sent directory: \(sentDir.path)")
+        }
+
+        // Create demo images in the source directory (files to upload)
         createDemoImages()
 
         // Notify the UI to add the config
@@ -58,13 +64,18 @@ class DemoModeManager: ObservableObject {
         // Clear any existing demo images first
         clearExistingDemoImages()
 
-        // Recreate demo directory
+        // Recreate demo directories
         if let demoDir = createDemoDirectory() {
             demoDirectoryURL = demoDir
             print("✅ Recreated demo directory: \(demoDir.path)")
         }
 
-        // Create fresh demo images
+        if let sentDir = createDemoSentDirectory() {
+            demoSentDirectoryURL = sentDir
+            print("✅ Recreated demo sent directory: \(sentDir.path)")
+        }
+
+        // Create fresh demo images in source directory
         createDemoImages()
 
         // Start the demo transfer
@@ -104,14 +115,14 @@ class DemoModeManager: ObservableObject {
                 syncManager.configConnectionTimes[config.id] = "Connected"
 
                 // Add initial demo log
-                syncManager.addConfigLog(config.id, message: "🎬 Demo mode active - simulating FTP downloads")
-                syncManager.addConfigLog(config.id, message: "📁 Demo images will appear in Success tab")
+                syncManager.addConfigLog(config.id, message: "🎬 Demo mode active - simulating FTP uploads")
+                syncManager.addConfigLog(config.id, message: "📁 Demo images will be uploaded and moved to Sent folder")
 
                 // Simulate scanning directory
-                self.writeInfoNotification(config: config, message: "📁 Scanning directory /demo/images...")
+                self.writeInfoNotification(config: config, message: "📁 Scanning local directory for files to upload...")
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                    self.writeInfoNotification(config: config, message: "📊 Found 10 files in /demo/images")
+                    self.writeInfoNotification(config: config, message: "📊 Found 10 files to upload")
 
                     // Begin moving demo images
                     self.startDemoImageTransfer(config: config, syncManager: syncManager)
@@ -124,7 +135,7 @@ class DemoModeManager: ObservableObject {
         }
     }
 
-    /// Generate fake download stats periodically
+    /// Generate fake upload stats periodically
     private func startFakeStats(config: FTPConfig, syncManager: FileSyncManager) {
         print("📊 Starting fake stats generation")
 
@@ -135,12 +146,12 @@ class DemoModeManager: ObservableObject {
             DispatchQueue.main.async {
                 guard self.isDemoMode else { return }
 
-                // Generate fake download speed (between 8-25 MB/s)
+                // Generate fake upload speed (between 8-25 MB/s)
                 let speedMBps = Double.random(in: 8.0...25.0)
                 let formattedSpeed = String(format: "%.1f MB/s", speedMBps)
 
                 // Update sync manager stats
-                syncManager.configSyncStatus[config.id] = "Downloading @ \(formattedSpeed)"
+                syncManager.configSyncStatus[config.id] = "Uploading @ \(formattedSpeed)"
                 syncManager.configDownloadSpeeds[config.id] = formattedSpeed
 
                 // Calculate fake total downloaded (just track internally)
@@ -294,19 +305,30 @@ class DemoModeManager: ObservableObject {
         }
     }
 
-    /// Create 10 demo images programmatically
-    private func createDemoImages() {
-        guard demoConfig != nil else { return }
+    /// Create the demo sent directory (sandbox-safe location for "uploaded" files)
+    private func createDemoSentDirectory() -> URL? {
+        guard let config = demoConfig else { return nil }
 
-        // Create images in a temporary directory (simulating FTP server)
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("FTPDemo_\(UUID().uuidString)")
+        let sourceURL = URL(fileURLWithPath: config.localSourcePath)
+        let sentURL = sourceURL.deletingLastPathComponent().appendingPathComponent("Demo_Sent")
 
         do {
-            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
+            try FileManager.default.createDirectory(at: sentURL, withIntermediateDirectories: true, attributes: nil)
+            return sentURL
+        } catch {
+            print("❌ Failed to create demo sent directory: \(error)")
+            return nil
+        }
+    }
 
+    /// Create 10 demo images programmatically in the source directory
+    private func createDemoImages() {
+        guard let demoDir = demoDirectoryURL else { return }
+
+        do {
             for i in 1...10 {
                 let image = createDemoImage(number: i)
-                let imageURL = tempDir.appendingPathComponent("Demo_image_\(String(format: "%02d", i)).png")
+                let imageURL = demoDir.appendingPathComponent("Demo_image_\(String(format: "%02d", i)).png")
 
                 if let tiffData = image.tiffRepresentation,
                    let bitmapImage = NSBitmapImageRep(data: tiffData),
@@ -377,14 +399,14 @@ class DemoModeManager: ObservableObject {
         return image
     }
 
-    /// Start transferring demo images one by one (10 images over 20 seconds = 1 image per 2 seconds)
+    /// Start uploading demo images one by one (10 images over 20 seconds = 1 image per 2 seconds)
     private func startDemoImageTransfer(config: FTPConfig, syncManager: FileSyncManager) {
         guard !demoImagesCreated.isEmpty else {
             print("⚠️ No demo images to transfer")
             return
         }
 
-        print("🎬 Starting demo image transfer: 10 images over 20 seconds")
+        print("🎬 Starting demo image upload: 10 images over 20 seconds")
 
         for (index, imageURL) in demoImagesCreated.enumerated() {
             let delay = Double(index) * 2.0 // 2 seconds between each image
@@ -392,10 +414,10 @@ class DemoModeManager: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 guard let self = self, self.isDemoMode else { return }
 
-                // Send "downloading" notification
-                self.writeInfoNotification(config: config, message: "⬇️ Downloading: \(imageURL.lastPathComponent)")
+                // Send "uploading" notification
+                self.writeInfoNotification(config: config, message: "⬆️ Uploading: \(imageURL.lastPathComponent)")
 
-                // Simulate download progress
+                // Simulate upload progress
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     guard self.isDemoMode else { return }
                     self.writeProgressNotification(
@@ -405,52 +427,53 @@ class DemoModeManager: ObservableObject {
                     )
                 }
 
-                // Copy image to local download directory
+                // Move image to sent directory (simulating successful upload)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     guard self.isDemoMode else { return }
 
-                    if let demoDir = self.demoDirectoryURL {
-                        let destinationURL = demoDir.appendingPathComponent(imageURL.lastPathComponent)
+                    if let sentDir = self.demoSentDirectoryURL {
+                        let destinationURL = sentDir.appendingPathComponent(imageURL.lastPathComponent)
 
                         do {
-                            try FileManager.default.copyItem(at: imageURL, to: destinationURL)
+                            // Get file size before moving
+                            let fileSize = try FileManager.default.attributesOfItem(atPath: imageURL.path)[.size] as? UInt64 ?? 0
+                            let fileSizeMB = Double(fileSize) / 1024.0 / 1024.0
+
+                            // Move file to sent directory
+                            try FileManager.default.moveItem(at: imageURL, to: destinationURL)
 
                             // Increment file counter
                             self.currentFileIndex = index + 1
 
-                            // Add success notification directly to the notification file
-                            let fileSize = try FileManager.default.attributesOfItem(atPath: imageURL.path)[.size] as? UInt64 ?? 0
-                            let fileSizeMB = Double(fileSize) / 1024.0 / 1024.0
-
                             // Write success notification to file (for Success tab) and post to NotificationCenter
                             self.writeSuccessNotification(
                                 config: config,
-                                message: "Downloaded: \(imageURL.lastPathComponent) (\(String(format: "%.2f", fileSizeMB)) MB)",
+                                message: "Uploaded: \(imageURL.lastPathComponent) (\(String(format: "%.2f", fileSizeMB)) MB)",
                                 filename: imageURL.lastPathComponent
                             )
 
                             // Also write to info feed
                             self.writeInfoNotification(
                                 config: config,
-                                message: "✅ Completed: \(imageURL.lastPathComponent) - \(String(format: "%.2f", fileSizeMB)) MB"
+                                message: "✅ Uploaded: \(imageURL.lastPathComponent) - \(String(format: "%.2f", fileSizeMB)) MB"
                             )
 
-                            print("✅ Demo image transferred: \(imageURL.lastPathComponent)")
+                            print("✅ Demo image uploaded: \(imageURL.lastPathComponent)")
                         } catch {
-                            print("❌ Failed to transfer demo image: \(error)")
+                            print("❌ Failed to upload demo image: \(error)")
                         }
                     }
                 }
             }
         }
 
-        // After all images are transferred, add completion message
+        // After all images are uploaded, add completion message
         DispatchQueue.main.asyncAfter(deadline: .now() + 21.0) { [weak self] in
             guard let self = self else { return }
 
             self.writeSuccessNotification(config: config, message: "")
             self.writeSuccessNotification(config: config, message: "Demo completed successfully!")
-            syncManager.addConfigLog(config.id, message: "📁 Demo images placed in: \(config.localSourcePath)")
+            syncManager.addConfigLog(config.id, message: "📁 Uploaded files moved to: \(self.demoSentDirectoryURL?.path ?? "Demo_Sent")")
             syncManager.addConfigLog(config.id, message: "")
             syncManager.addConfigLog(config.id, message: "ℹ️ Demo mode will cleanup when you quit the app")
         }
@@ -574,7 +597,7 @@ class DemoModeManager: ObservableObject {
 
         let notification: [String: Any] = [
             "config_id": configHash,
-            "notification_type": "download_progress",
+            "notification_type": "upload_progress",
             "message": "",
             "timestamp": UInt64(Date().timeIntervalSince1970 * 1000), // milliseconds
             "filename": filename,
@@ -641,25 +664,13 @@ class DemoModeManager: ObservableObject {
             }
         }
 
-        // Delete temporary demo images
-        for imageURL in demoImagesCreated {
+        // Delete demo sent directory and all its contents
+        if let sentDir = demoSentDirectoryURL {
             do {
-                if FileManager.default.fileExists(atPath: imageURL.path) {
-                    try FileManager.default.removeItem(at: imageURL)
-                }
+                try FileManager.default.removeItem(at: sentDir)
+                print("✅ Deleted demo sent directory: \(sentDir.path)")
             } catch {
-                print("❌ Failed to delete demo image: \(error)")
-            }
-        }
-
-        // Clean up the temp directory
-        if let firstImage = demoImagesCreated.first {
-            let tempDir = firstImage.deletingLastPathComponent()
-            do {
-                try FileManager.default.removeItem(at: tempDir)
-                print("✅ Deleted temp demo images directory")
-            } catch {
-                print("❌ Failed to delete temp directory: \(error)")
+                print("❌ Failed to delete demo sent directory: \(error)")
             }
         }
 
@@ -667,6 +678,7 @@ class DemoModeManager: ObservableObject {
         isDemoMode = false
         demoConfig = nil
         demoDirectoryURL = nil
+        demoSentDirectoryURL = nil
         demoImagesCreated.removeAll()
 
         print("✅ Demo mode cleanup complete")

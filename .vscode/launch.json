@@ -4,37 +4,19 @@
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder:FTPUploader}",
-            "name": "Debug FTPDownloader",
-            "program": "${workspaceFolder:FTPUploader}/.build/debug/FTPDownloader",
-            "preLaunchTask": "swift: Build Debug FTPDownloader"
+            "cwd": "${workspaceFolder:FTPSender}",
+            "name": "Debug FTPSender",
+            "program": "${workspaceFolder:FTPSender}/.build/debug/FTPSender",
+            "preLaunchTask": "swift: Build Debug FTPSender"
         },
         {
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder:FTPUploader}",
-            "name": "Release FTPDownloader",
-            "program": "${workspaceFolder:FTPUploader}/.build/release/FTPDownloader",
-            "preLaunchTask": "swift: Build Release FTPDownloader"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:FTPUploader}",
-            "name": "Debug FTPUploader",
-            "program": "${workspaceFolder:FTPUploader}/.build/debug/FTPUploader",
-            "preLaunchTask": "swift: Build Debug FTPUploader"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:FTPUploader}",
-            "name": "Release FTPUploader",
-            "program": "${workspaceFolder:FTPUploader}/.build/release/FTPUploader",
-            "preLaunchTask": "swift: Build Release FTPUploader"
+            "cwd": "${workspaceFolder:FTPSender}",
+            "name": "Release FTPSender",
+            "program": "${workspaceFolder:FTPSender}/.build/release/FTPSender",
+            "preLaunchTask": "swift: Build Release FTPSender"
         }
     ]
 }

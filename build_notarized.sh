@@ -14,7 +14,7 @@ echo ""
 
 # Check if we're in the right directory
 if [ ! -f "Package.swift" ]; then
-    echo "❌ Error: Package.swift not found. Please run this script from the FTPUploader project root."
+    echo "❌ Error: Package.swift not found. Please run this script from the FTPSender project root."
     exit 1
 fi
 
@@ -127,8 +127,8 @@ mkdir -p "$APP_PATH/Contents/MacOS"
 mkdir -p "$APP_PATH/Contents/Resources"
 
 # Copy the Swift binary
-cp .build/release/FTPUploader "$APP_PATH/Contents/MacOS/"
-chmod +x "$APP_PATH/Contents/MacOS/FTPUploader"
+cp .build/release/FTPSender "$APP_PATH/Contents/MacOS/"
+chmod +x "$APP_PATH/Contents/MacOS/FTPSender"
 
 # Copy resources
 if [ -f "app-icon.icns" ]; then
@@ -160,7 +160,7 @@ cat > "$APP_PATH/Contents/Info.plist" << EOF
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>FTPUploader</string>
+    <string>FTPSender</string>
     <key>CFBundleIdentifier</key>
     <string>$BUNDLE_ID</string>
     <key>CFBundleName</key>
@@ -196,16 +196,16 @@ echo "Using certificate: $CERTIFICATE_NAME"
 # Sign the main app binary with entitlements and identifier
 echo "📱 Signing main app binary (with embedded Rust FFI library)..."
 codesign --force --options runtime --sign "$CERTIFICATE_NAME" \
-    --entitlements "$PROJECT_DIR/Sources/FTPUploader/FTPUploader.entitlements" \
+    --entitlements "$PROJECT_DIR/Sources/FTPSender/FTPSender.entitlements" \
     --identifier "com.roningroupinc.ftpsender" \
     --timestamp \
-    "$APP_PATH/Contents/MacOS/FTPUploader"
+    "$APP_PATH/Contents/MacOS/FTPSender"
 echo "✅ Main binary signed"
 
 # Sign the app bundle (without --deep to preserve individual signatures)
 echo "📦 Signing app bundle..."
 codesign --force --options runtime --sign "$CERTIFICATE_NAME" \
-    --entitlements "$PROJECT_DIR/Sources/FTPUploader/FTPUploader.entitlements" \
+    --entitlements "$PROJECT_DIR/Sources/FTPSender/FTPSender.entitlements" \
     --timestamp \
     "$APP_PATH"
 echo "✅ App bundle signed"
@@ -277,7 +277,7 @@ fi
 # Set the DMG file icon (the file itself, not just the volume)
 echo "🎨 Setting DMG file icon..."
 # Find the actual DMG file (in case create-dmg created a conflicted name)
-ACTUAL_DMG=$(ls -t FTPUploader*.dmg 2>/dev/null | head -1)
+ACTUAL_DMG=$(ls -t FTPSender*.dmg 2>/dev/null | head -1)
 if [ -n "$ACTUAL_DMG" ] && [ -f "$ACTUAL_DMG" ]; then
     # Move it to the expected name if different
     if [ "$ACTUAL_DMG" != "FTPSender.dmg" ]; then

@@ -162,8 +162,8 @@ class LogCollectionService: ObservableObject {
                 }
 
                 // Filter for FTP Sender app logs
-                if logEntry.subsystem.contains("FTPUploader") ||
-                   logEntry.category.contains("FTPUploader") ||
+                if logEntry.subsystem.contains("FTPSender") ||
+                   logEntry.category.contains("FTPSender") ||
                    logEntry.composedMessage.contains("FTP") ||
                    logEntry.composedMessage.contains("Rust") ||
                    logEntry.composedMessage.contains("Config") ||
@@ -355,7 +355,7 @@ class LogCollectionService: ObservableObject {
         dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         let timestamp = dateFormatter.string(from: Date())
 
-        let fileName = "FTPUploader_Log_\(timestamp).txt"
+        let fileName = "FTPSender_Log_\(timestamp).txt"
         let desktopURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
 
         guard let desktopURL = desktopURL else { return nil }
@@ -387,7 +387,7 @@ class LogCollectionService: ObservableObject {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         let timestamp = dateFormatter.string(from: Date())
-        return "FTPUploader_Log_\(timestamp).txt"
+        return "FTPSender_Log_\(timestamp).txt"
     }
 
     // Helper function to get current configuration info

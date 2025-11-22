@@ -8,7 +8,7 @@ echo "============================"
 
 # Check if we're in the right directory
 if [ ! -f "Package.swift" ]; then
-    echo "❌ Error: Package.swift not found. Please run this script from the FTPUploader project root."
+    echo "❌ Error: Package.swift not found. Please run this script from the FTPSender project root."
     exit 1
 fi
 
@@ -33,4 +33,4 @@ echo "================================"
 echo ""
 
 # Launch the app from terminal to see logs
-"$APP_PATH/Contents/MacOS/FTPUploader"
+"$APP_PATH/Contents/MacOS/FTPSender"

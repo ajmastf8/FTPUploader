@@ -26,7 +26,7 @@ echo ""
 
 # Check if we're in the right directory
 if [ ! -f "Package.swift" ]; then
-    echo "❌ Error: Package.swift not found. Please run this script from the FTPUploader project root."
+    echo "❌ Error: Package.swift not found. Please run this script from the FTPSender project root."
     exit 1
 fi
 
@@ -129,8 +129,8 @@ if [ $? -eq 0 ]; then
     mkdir -p "$APP_PATH/Contents/Resources"
 
     # Copy the Swift binary (now contains statically-linked Rust code)
-    cp .build/release/FTPUploader "$APP_PATH/Contents/MacOS/"
-    chmod +x "$APP_PATH/Contents/MacOS/FTPUploader"
+    cp .build/release/FTPSender "$APP_PATH/Contents/MacOS/"
+    chmod +x "$APP_PATH/Contents/MacOS/FTPSender"
 
     echo "✅ Swift executable copied (with embedded Rust FFI library)"
 
@@ -157,8 +157,8 @@ if [ $? -eq 0 ]; then
     fi
 
     # Copy Help resources from SPM bundle
-    if [ -d ".build/arm64-apple-macosx/release/FTPUploader_FTPUploader.bundle/Help" ]; then
-        cp -r ".build/arm64-apple-macosx/release/FTPUploader_FTPUploader.bundle/Help" "$APP_PATH/Contents/Resources/"
+    if [ -d ".build/arm64-apple-macosx/release/FTPSender_FTPSender.bundle/Help" ]; then
+        cp -r ".build/arm64-apple-macosx/release/FTPSender_FTPSender.bundle/Help" "$APP_PATH/Contents/Resources/"
         echo "✅ Help resources copied to bundle"
     fi
 
@@ -176,7 +176,7 @@ if [ $? -eq 0 ]; then
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>FTPUploader</string>
+    <string>FTPSender</string>
     <key>CFBundleIdentifier</key>
     <string>com.roningroupinc.ftpsender</string>
     <key>CFBundleName</key>
@@ -223,17 +223,17 @@ INFOPLIST
     DEVELOPER_ID=$(security find-identity -p codesigning -v | grep "Developer ID Application" | head -1 | sed -E 's/^.*"(.+)"$/\1/')
     if [ -n "$DEVELOPER_ID" ]; then
         echo "   Using Developer ID: $DEVELOPER_ID"
-        codesign --force --sign "$DEVELOPER_ID" --entitlements Sources/FTPUploader/FTPUploader.entitlements --options runtime "$APP_PATH" 2>&1 | grep -v "replacing existing signature" || true
+        codesign --force --sign "$DEVELOPER_ID" --entitlements Sources/FTPSender/FTPSender.entitlements --options runtime "$APP_PATH" 2>&1 | grep -v "replacing existing signature" || true
         echo "✅ App signed with Developer ID (hardened runtime)"
     else
         echo "   No Developer ID found, using ad-hoc signature"
-        codesign --force --sign - --entitlements Sources/FTPUploader/FTPUploader.entitlements "$APP_PATH" 2>&1 | grep -v "replacing existing signature" || true
+        codesign --force --sign - --entitlements Sources/FTPSender/FTPSender.entitlements "$APP_PATH" 2>&1 | grep -v "replacing existing signature" || true
         echo "✅ App signed (ad-hoc with entitlements)"
     fi
 
     # Verify the app bundle
     echo "🔍 Verifying app bundle..."
-    if [ -d "$APP_PATH" ] && [ -f "$APP_PATH/Contents/MacOS/FTPUploader" ]; then
+    if [ -d "$APP_PATH" ] && [ -f "$APP_PATH/Contents/MacOS/FTPSender" ]; then
         echo "✅ App bundle verified successfully"
         echo ""
         echo "🚀 Ready to launch with: ./launch_app.sh"

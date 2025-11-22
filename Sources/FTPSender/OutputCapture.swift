@@ -25,7 +25,7 @@ class OutputCapture: ObservableObject {
     /// Set up a persistent log file
     private func setupLogFile() {
         let tempDir = FileManager.default.temporaryDirectory
-        let logFileName = "FTPUploader_Console_\(ProcessInfo.processInfo.processIdentifier).log"
+        let logFileName = "FTPSender_Console_\(ProcessInfo.processInfo.processIdentifier).log"
         logFileURL = tempDir.appendingPathComponent(logFileName)
 
         // Create or truncate the log file

@@ -25,7 +25,7 @@ This is a hybrid Swift/Rust macOS application for automated FTP file uploading w
 ### Core Components
 
 **Swift Frontend (SwiftUI App)**
-- `FTPUploaderApp.swift`: Main SwiftUI app entry point
+- `FTPSenderApp.swift`: Main SwiftUI app entry point
 - `ContentView.swift`: Primary UI with configuration management and file monitoring
 - `FTPConfigurationView.swift`: Configuration creation and editing interface
 - `FTPConfig.swift`: Data model for FTP server configurations
@@ -66,7 +66,7 @@ The build system creates a complete `.app` bundle containing:
 - `Package.swift`: Swift Package Manager configuration with FileProvider dependency
 - `RustFTP/Cargo.toml`: Rust dependencies for FTP, async, and JSON processing
 - `ExportOptions.plist`: Code signing and distribution settings
-- `Sources/FTPUploader/Info.plist`: macOS app bundle metadata
+- `Sources/FTPSender/Info.plist`: macOS app bundle metadata
 
 ### Development Workflow
 1. Use `./build.sh` for complete builds during development

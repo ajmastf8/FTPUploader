@@ -478,7 +478,7 @@ fn detect_monitor_conflicts(monitor_file: &MonitorFile, current_mode: &str, curr
 
         return Some((
             "critical".to_string(),
-            format!("Multiple FTPUploaders detected in FTP directory '{}':\n\n{}\n\nCONFLICT: Multiple DELETE-mode instances will cause unpredictable file deletion!",
+            format!("Multiple FTP Senders detected in FTP directory '{}':\n\n{}\n\nCONFLICT: Multiple DELETE-mode instances will cause unpredictable file deletion!",
                 ftp_directory, monitor_list.join("\n"))
         ));
     }
@@ -489,7 +489,7 @@ fn detect_monitor_conflicts(monitor_file: &MonitorFile, current_mode: &str, curr
         println!("🟡 MONITOR CONFLICT: Warning - delete monitor exists, current is keep");
         return Some((
             "warning".to_string(),
-            format!("Another FTPUploader detected in FTP directory '{}':\n\n  • {} ({}) - DELETE mode\n  • This instance - KEEP mode\n\nWARNING: The DELETE-mode instance may remove files before you upload them!",
+            format!("Another FTP Sender detected in FTP directory '{}':\n\n  • {} ({}) - DELETE mode\n  • This instance - KEEP mode\n\nWARNING: The DELETE-mode instance may remove files before you upload them!",
                 ftp_directory, monitor.profile_name, monitor.hostname)
         ));
     }
@@ -504,7 +504,7 @@ fn detect_monitor_conflicts(monitor_file: &MonitorFile, current_mode: &str, curr
 
         return Some((
             "warning".to_string(),
-            format!("Other FTPUploaders detected in FTP directory '{}':\n\n{}\n  • This instance - DELETE mode\n\nWARNING: Your DELETE mode will affect their downloads!",
+            format!("Other FTP Senders detected in FTP directory '{}':\n\n{}\n  • This instance - DELETE mode\n\nWARNING: Your DELETE mode will affect their downloads!",
                 ftp_directory, monitor_list.join("\n"))
         ));
     }
@@ -515,7 +515,7 @@ fn detect_monitor_conflicts(monitor_file: &MonitorFile, current_mode: &str, curr
         println!("🔵 MONITOR CONFLICT: Info - multiple keep monitors (safe)");
         return Some((
             "info".to_string(),
-            format!("Multiple FTPUploaders detected in FTP directory '{}' in KEEP mode. This is safe but redundant - all instances will upload the same files.", ftp_directory)
+            format!("Multiple FTP Senders detected in FTP directory '{}' in KEEP mode. This is safe but redundant - all instances will upload the same files.", ftp_directory)
         ));
     }
 
@@ -1343,9 +1343,9 @@ pub fn run_ftp_with_args(
     let data_dir_str = std::env::var("FTP_DATA_DIR").unwrap_or_else(|_| {
         // Fallback: try to construct Application Support path
         if let Ok(home) = std::env::var("HOME") {
-            format!("{}/Library/Application Support/FTPUploader", home)
+            format!("{}/Library/Application Support/FTPSender", home)
         } else {
-            "/tmp/FTPUploader".to_string()
+            "/tmp/FTPSender".to_string()
         }
     });
     let data_dir = PathBuf::from(data_dir_str);
