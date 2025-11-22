@@ -151,17 +151,15 @@ struct ContentView: View {
                                              .padding(.horizontal, 20)
                                              .padding(.vertical, 12)
                                              .background(
-                                                 selectedConfigIndex == index ? 
-                                                 Color(NSColor.windowBackgroundColor) : 
-                                                 Color(NSColor.controlBackgroundColor).opacity(0.7)
+                                                 index % 2 == 0 ?
+                                                     Color(NSColor.controlBackgroundColor) :
+                                                     Color.blue.opacity(0.1)
                                              )
-                                             .clipShape(
-                                                 UnevenRoundedRectangle(
-                                                     topLeadingRadius: 0,
-                                                     bottomLeadingRadius: 0,
-                                                     bottomTrailingRadius: 0,
-                                                     topTrailingRadius: 0
-                                                 )
+                                             .overlay(
+                                                 Rectangle()
+                                                     .frame(height: 3)
+                                                     .foregroundColor(selectedConfigIndex == index ? Color.accentColor : Color.clear),
+                                                 alignment: .bottom
                                              )
                                      }
                                      .buttonStyle(.plain)
@@ -180,29 +178,36 @@ struct ContentView: View {
                             .padding(.horizontal)
                             .padding(.top, 8)
                             
-                            // Config Details
-                            ConfigurationDetailView(
-                                config: $configurations[selectedConfigIndex],
-                                syncManager: syncManager,
-                                ftpService: ftpService,
-                                onConfigChanged: saveConfigurations,
-                                onDeleteConfig: {
-                                    showingDeleteConfig = true
-                                }
-                            )
-                            
-                            // Live Notifications Section
-                            VStack(alignment: .leading, spacing: 12) {
-                                Divider()
-                                    .padding(.horizontal)
-                                
-                                NotificationFeed(
-                                    configId: configurations[selectedConfigIndex].id,
-                                    syncManager: syncManager
+                            // Config Details with alternating background
+                            VStack(spacing: 0) {
+                                ConfigurationDetailView(
+                                    config: $configurations[selectedConfigIndex],
+                                    syncManager: syncManager,
+                                    ftpService: ftpService,
+                                    onConfigChanged: saveConfigurations,
+                                    onDeleteConfig: {
+                                        showingDeleteConfig = true
+                                    }
                                 )
-                                .id(configurations[selectedConfigIndex].id)
+
+                                // Live Notifications Section
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Divider()
+                                        .padding(.horizontal)
+
+                                    NotificationFeed(
+                                        configId: configurations[selectedConfigIndex].id,
+                                        syncManager: syncManager
+                                    )
+                                    .id(configurations[selectedConfigIndex].id)
+                                }
+                                .padding(.bottom, 20)
                             }
-                            .padding(.bottom, 20)
+                            .background(
+                                selectedConfigIndex % 2 == 0 ?
+                                Color(NSColor.windowBackgroundColor) :
+                                Color.blue.opacity(0.08)
+                            )
                         }
                     }
                     .padding(.horizontal)

@@ -11,6 +11,8 @@ use chrono::Utc;
 use colored::*;
 use xxhash_rust::xxh3::xxh3_64;
 use crate::db;
+use notify::{Watcher, RecursiveMode, Event, EventKind};
+use std::collections::HashSet;
 
 /// Connection timeout for FTP operations (30 seconds)
 const FTP_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -1139,7 +1141,33 @@ impl SessionStats {
             0.0
         }
     }
-    
+
+    /// Get elapsed time since session started (for continuous monitoring)
+    fn elapsed_secs(&self) -> f64 {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        (now - self.session_start_time) as f64
+    }
+
+    /// Write session JSON with elapsed time (for FSEvents continuous monitoring)
+    fn write_session_json_with_elapsed(&self, session_file: &str, config: &FTPConfig) -> Result<(), Box<dyn std::error::Error>> {
+        let elapsed = self.elapsed_secs();
+        let report = SessionReport {
+            session_id: config.session_id.clone(),
+            config_id: config.config_id.clone(),
+            total_files: self.file_count,
+            total_bytes: self.total_bytes,
+            total_time_secs: elapsed,
+            average_speed_mbps: if elapsed > 0.0 { (self.total_bytes as f64 / 1024.0 / 1024.0) / elapsed } else { 0.0 },
+        };
+
+        let report_json = serde_json::to_string_pretty(&report)?;
+        fs::write(session_file, report_json)?;
+        Ok(())
+    }
+
     fn write_session_json(&self, session_file: &str, config: &FTPConfig) -> Result<(), Box<dyn std::error::Error>> {
         let report = SessionReport {
             session_id: config.session_id.clone(),
@@ -1357,29 +1385,46 @@ pub fn run_ftp_with_args(
     // Create persistent session state that accumulates across all iterations
     let session_state = Arc::new(Mutex::new(SessionState::new()));
 
-    // Main continuous processing loop
-    let mut iteration = 0;
-    loop {
-        // Check if shutdown signal received (Ctrl-C)
-        if check_shutdown() {
-            config_log(&config, &format!("{} Ctrl-C received, exiting completely", "🛑".red()));
-            break;
-        }
-        
-        // Check if this specific config should stop
-        if check_config_stop() {
-            config_log(&config, &format!("{} Config {} stopped, exiting gracefully", "⏸️".yellow(), config.config_name));
-            break;
-        }
-        
+    // Determine whether to use FSEvents or polling mode
+    let use_fsevents = config.sync_interval > 0.0;
+
+    if use_fsevents {
+        // FSEvents mode - event-driven file watching
+        config_log(&config, &format!("{} Using FSEvents for event-driven file watching", "👁️".cyan()));
+        let _ = send_notification(&config, "info", "👁️ Using FSEvents for efficient file watching", None, None);
+
+        // Create a channel for file events
+        let (tx, rx) = std::sync::mpsc::channel();
+
+        // Create the watcher
+        let mut watcher = notify::recommended_watcher(move |res: Result<Event, notify::Error>| {
+            if let Ok(event) = res {
+                // Only send events for file creation/modification
+                match event.kind {
+                    EventKind::Create(_) | EventKind::Modify(_) => {
+                        let _ = tx.send(event);
+                    }
+                    _ => {}
+                }
+            }
+        }).map_err(|e| format!("Failed to create file watcher: {}", e))?;
+
+        // Watch the local source directory
+        let watch_path = PathBuf::from(&config.local_source_path);
+        watcher.watch(&watch_path, RecursiveMode::Recursive)
+            .map_err(|e| format!("Failed to watch directory {}: {}", config.local_source_path, e))?;
+
+        config_log(&config, &format!("{} Watching directory: {}", "📂".green(), config.local_source_path));
+
+        // Send connected notification immediately to update UI state
+        // This signals that the monitor is active even before any FTP connection is made
+        send_notification(&config, "info", &format!("Connected to {}", config.server_address), None, None)?;
+
+        // Do an initial scan to process any existing files
+        let mut iteration = 0;
         iteration += 1;
-        let _start_time = Instant::now();
-        let start_datetime = Utc::now();
-        
-        println!("🔄 RUST DEBUG: LOOP CONTINUED - starting iteration {} at {}", iteration, start_datetime.format("%H:%M:%S"));
-        config_log(&config, &format!("{} Starting iteration {} at {}", "🔄".blue(), iteration, start_datetime.format("%H:%M:%S")));
-        
-        // Process one iteration
+        config_log(&config, &format!("{} Initial scan (iteration {})", "🔄".blue(), iteration));
+
         let result = process_single_iteration(
             &config,
             status_file,
@@ -1392,79 +1437,150 @@ pub fn run_ftp_with_args(
             iteration,
             &session_state
         );
-        
-        match result {
-            Ok(_) => {
-                config_log(&config, &format!("{} Iteration {} completed successfully", "✅".green(), iteration));
-            }
-            Err(e) => {
-                config_log(&config, &format!("{} Iteration {} failed: {}", "❌".red(), iteration, e));
-                // Don't exit on errors, just log and continue to next iteration
-            }
-        }
-        
-        // Check if we should continue or exit
-        config_log(&config, &format!("🔍 DEBUG: Checking sync_interval: {}", config.sync_interval));
-        if config.sync_interval <= 0.0 {
-            config_log(&config, &format!("{} No sync interval configured ({}), exiting after one iteration", "⏹️".yellow(), config.sync_interval));
-            break;
-        }
-        
-        config_log(&config, &format!("✅ DEBUG: Sync interval is positive ({}s), loop will continue", config.sync_interval));
 
-        // Send notification about looping
-        let _ = send_notification(&config, "info", &format!("⏳ Waiting {} seconds before next sync cycle...", config.sync_interval), None, None);
+        if let Err(e) = result {
+            config_log(&config, &format!("{} Initial scan failed: {}", "❌".red(), e));
+        }
 
-        // Wait for the configured sync interval before next iteration
-        config_log(&config, &format!("{} Waiting {} seconds before next sync cycle...", "⏳".yellow(), config.sync_interval));
-        config_log(&config, &format!("{} Process will stay alive and continue monitoring", "🔄".blue()));
-        
-        // Check for shutdown during interval wait - check every 100ms for faster response
-        let wait_ms = (config.sync_interval * 1000.0) as u64; // Convert to milliseconds
-        let mut elapsed_ms = 0;
-        
-        config_log(&config, &format!("🔍 DEBUG: Starting interval wait for {} ms", wait_ms));
-        
-        while elapsed_ms < wait_ms {
+        // Send idle status
+        send_status(status_file, &config, "Watching", "Waiting for new files...", 1.0, None)?;
+        let _ = send_notification(&config, "info", "👁️ Watching for new files...", None, None);
+
+        // Track pending files and use sync_interval as batching window
+        let mut pending_files: HashSet<PathBuf> = HashSet::new();
+        let mut last_batch_time = Instant::now();
+        let batch_interval = Duration::from_secs_f64(config.sync_interval);
+
+        // Create continuous session stats that tracks elapsed time from start to stop
+        let mut continuous_session = SessionStats::new();
+        let mut last_session_update = Instant::now();
+        let session_update_interval = Duration::from_secs(1); // Update session file every second
+
+        // Write initial session file
+        let _ = continuous_session.write_session_json_with_elapsed(session_file, &config);
+
+        config_log(&config, &format!("{} Batch window: {}s (files will be batched together)", "⏱️".cyan(), config.sync_interval));
+
+        // Main event loop
+        loop {
+            // Check shutdown conditions
             if shutdown_flag.load(Ordering::SeqCst) {
-                config_log(&config, &format!("{} Shutdown signal received during interval wait, exiting gracefully", "🛑".red()));
-
-                // Cleanup: Remove our entry from monitor files before exiting
-                println!("🧹 CLEANUP: Removing monitor entries (shutdown during wait)");
-                let _ = cleanup_all_monitor_files(&config);
-
-                return Ok(());
+                config_log(&config, &format!("{} Shutdown signal received, exiting gracefully", "🛑".red()));
+                break;
             }
             if fs::metadata(&shutdown_file).is_ok() {
-                config_log(&config, &format!("{} Shutdown file detected during interval wait, exiting gracefully", "🛑".red()));
-
-                // Cleanup: Remove our entry from monitor files before exiting
-                println!("🧹 CLEANUP: Removing monitor entries (config stopped during wait)");
-                let _ = cleanup_all_monitor_files(&config);
-
-                return Ok(());
+                config_log(&config, &format!("{} Config {} stopped, exiting gracefully", "⏸️".yellow(), config.config_name));
+                break;
             }
-            std::thread::sleep(std::time::Duration::from_millis(100));
-            elapsed_ms += 100;
+
+            // Try to receive events with timeout
+            match rx.recv_timeout(Duration::from_millis(100)) {
+                Ok(event) => {
+                    // File event received - add to pending set
+                    for path in event.paths {
+                        // Skip hidden files, temp files, and directories
+                        if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
+                            if !filename.starts_with('.') && !filename.ends_with(".tmp") && path.is_file() {
+                                pending_files.insert(path);
+                            }
+                        }
+                    }
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    // Update session file periodically with elapsed time
+                    if last_session_update.elapsed() >= session_update_interval {
+                        last_session_update = Instant::now();
+                        let _ = continuous_session.write_session_json_with_elapsed(session_file, &config);
+                    }
+
+                    // Check if batch interval has elapsed
+                    if last_batch_time.elapsed() >= batch_interval {
+                        // Reset timer regardless of whether we have files
+                        last_batch_time = Instant::now();
+
+                        // Process if we have pending files
+                        if !pending_files.is_empty() {
+                            iteration += 1;
+                            let file_count = pending_files.len();
+
+                            config_log(&config, &format!("{} Batch window elapsed - {} file(s) queued, starting iteration {}",
+                                "📥".green(), file_count, iteration));
+
+                            let _ = send_notification(&config, "info",
+                                &format!("📥 Uploading {} file(s)", file_count), None, None);
+
+                            // Clear pending files before processing
+                            pending_files.clear();
+
+                            // Process the iteration
+                            let result = process_single_iteration(
+                                &config,
+                                status_file,
+                                result_file,
+                                session_file,
+                                hash_file,
+                                &shutdown_file,
+                                &shutdown_flag,
+                                &connection_manager,
+                                iteration,
+                                &session_state
+                            );
+
+                            match result {
+                                Ok(_) => {
+                                    config_log(&config, &format!("{} Iteration {} completed successfully", "✅".green(), iteration));
+
+                                    // Update continuous session stats from session_state
+                                    if let Ok(state) = session_state.lock() {
+                                        continuous_session.file_count = state.total_files;
+                                        continuous_session.total_bytes = state.total_bytes;
+                                        continuous_session.total_time = state.total_upload_time;
+                                    }
+                                }
+                                Err(e) => {
+                                    config_log(&config, &format!("{} Iteration {} failed: {}", "❌".red(), iteration, e));
+                                }
+                            }
+
+                            // Update session file with current stats and elapsed time
+                            let _ = continuous_session.write_session_json_with_elapsed(session_file, &config);
+
+                            // Return to watching state
+                            send_status(status_file, &config, "Watching", "Waiting for new files...", 1.0, None)?;
+                            let _ = send_notification(&config, "info", "👁️ Watching for new files...", None, None);
+                        }
+                    }
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    config_log(&config, &format!("{} File watcher disconnected", "❌".red()));
+                    break;
+                }
+            }
         }
-        
-        config_log(&config, &format!("✅ DEBUG: Interval wait completed, continuing to next iteration"));
-        
-        // Check shutdown flag and shutdown file again after interval
-        if shutdown_flag.load(Ordering::SeqCst) {
-            config_log(&config, &format!("{} Shutdown signal received after interval, exiting gracefully", "🛑".red()));
-            break;
+
+        // Write final session report with elapsed time
+        config_log(&config, &format!("{} Session ended - writing final session report", "📊".blue()));
+        let _ = continuous_session.write_session_json_with_elapsed(session_file, &config);
+    } else {
+        // Legacy polling mode - single iteration
+        config_log(&config, &format!("{} No sync interval configured, running single iteration", "⏹️".yellow()));
+
+        let result = process_single_iteration(
+            &config,
+            status_file,
+            result_file,
+            session_file,
+            hash_file,
+            &shutdown_file,
+            &shutdown_flag,
+            &connection_manager,
+            1,
+            &session_state
+        );
+
+        if let Err(e) = result {
+            config_log(&config, &format!("{} Single iteration failed: {}", "❌".red(), e));
         }
-        // Note: We don't check for shutdown file here because it would prevent the loop from working
-        // The shutdown file is only checked during the interval wait, not after
-        
-        // Continue to next iteration
-        
-        // Continue to next iteration
-        config_log(&config, &format!("🔄 Starting next iteration - will rescan directories for new files"));
-        config_log(&config, &format!("🔍 DEBUG: About to continue to iteration {}", iteration + 1));
-        println!("🔍 RUST DEBUG: About to continue to iteration {}", iteration + 1);
-        println!("🔄 RUST DEBUG: LOOP WILL CONTINUE - about to hit the end of loop body");
     }
 
     println!("🔄 RUST DEBUG: LOOP ENDED - process exiting");

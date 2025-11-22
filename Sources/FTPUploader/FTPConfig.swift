@@ -39,9 +39,9 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
     // Menu bar app options
     @Published var runOnLaunch: Bool = false  // Auto-start this config when app launches
 
-    // Predefined sync interval options
-    static let syncIntervalOptions: [TimeInterval] = [0.1, 0.5, 1, 5, 15, 30, 3600, 7200] // 0.1s, 0.5s, 1s, 5s, 15s, 30s, 1hr, 2hr
-    static let syncIntervalLabels = ["0.1s", "0.5s", "1s", "5s", "15s", "30s", "1hr", "2hr"]
+    // Predefined sync interval options (batch window for FSEvents)
+    static let syncIntervalOptions: [TimeInterval] = [0.5, 1, 2, 5, 15, 30, 3600, 7200] // 0.5s, 1s, 2s, 5s, 15s, 30s, 1hr, 2hr
+    static let syncIntervalLabels = ["0.5s", "1s", "2s", "5s", "15s", "30s", "1hr", "2hr"]
     
     // Predefined stabilization interval options
     static let stabilizationIntervalOptions: [TimeInterval] = [0, 1, 5, 15, 30, 60] // None, 1s, 5s, 15s, 30s, 1min
@@ -71,8 +71,8 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
         self.port = 21
         self.localSourcePath = ""
         self.remoteDestination = "/"
-        self.syncInterval = 1 // 1 second default (much faster than 5s)
-        self.stabilizationInterval = 0 // 0 seconds default (no stabilization for fast sync)
+        self.syncInterval = 2 // 2 second default batching window
+        self.stabilizationInterval = 5 // 5 seconds default stabilization
         self.uploadAggressiveness = .moderate // Default to moderate aggressiveness
         self.autoTuneAggressiveness = true // Default to auto-tuning enabled
     }
@@ -85,8 +85,8 @@ class FTPConfig: Codable, Identifiable, ObservableObject, @unchecked Sendable {
         self.port = port
         self.localSourcePath = ""
         self.remoteDestination = "/"
-        self.syncInterval = 1 // 1 second default (much faster than 5s)
-        self.stabilizationInterval = 5 // 5 seconds default (changed from 0)
+        self.syncInterval = 2 // 2 second default batching window
+        self.stabilizationInterval = 5 // 5 seconds default
         self.uploadAggressiveness = .moderate // Default to moderate aggressiveness
         self.autoTuneAggressiveness = true // Default to auto-tuning enabled
     }

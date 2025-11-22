@@ -14,7 +14,7 @@ fi
 
 # Look for app bundle (dev build by default)
 BUILD_DIR="build/dev"
-APP_NAME="FTPUploader.app"
+APP_NAME="FTPSender.app"
 APP_PATH="$BUILD_DIR/$APP_NAME"
 
 if [ ! -d "$APP_PATH" ]; then

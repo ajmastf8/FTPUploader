@@ -30,7 +30,7 @@ struct FTPConfigurationView: View {
     @State private var localSourcePath: String = ""
     @State private var remoteDestination: String = "/"
     @State private var respectFilePaths: Bool = true
-    @State private var syncInterval: TimeInterval = 5
+    @State private var syncInterval: TimeInterval = 2 // Default batching window for FSEvents
     @State private var stabilizationInterval: TimeInterval = 5
     @State private var uploadAggressiveness: FTPConfig.UploadAggressiveness = .moderate
     @State private var autoTuneAggressiveness: Bool = true
@@ -454,7 +454,7 @@ extension FTPConfigurationView {
 
                     HStack(spacing: 20) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Sync Interval:")
+                            Text("Batch Window:")
                                 .font(.body)
                                 .fontWeight(.medium)
                             Picker("", selection: $syncInterval) {
@@ -489,6 +489,11 @@ extension FTPConfigurationView {
                             .frame(width: 140)
                         }
                     }
+
+                    Text("Files are batched together within the window before uploading")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
 
                     VStack(alignment: .leading, spacing: 6) {
                         Toggle("Auto-tune connections", isOn: $autoTuneAggressiveness)
