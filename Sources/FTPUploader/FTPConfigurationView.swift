@@ -18,6 +18,8 @@ struct FTPConfigurationView: View {
     @State private var newDirectory = ""
     @State private var isTestingConnection = false
     @State private var connectionResult: String?
+    @State private var connectionTestPassed = false
+    @State private var currentStep = 1 // Wizard step: 1=Connection, 2=Paths, 3=Settings
     
     // Add state variables to track form values and sync with configuration
     @State private var name: String = ""
@@ -57,13 +59,13 @@ struct FTPConfigurationView: View {
                             .resizable()
                             .frame(width: 32, height: 32)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
-                        
+
                         Text(isNewConfiguration ? "New FTP Configuration" : "Edit FTP Configuration")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
                     }
-                    
+
                     Spacer()
 
                     HStack(spacing: 8) {
@@ -93,7 +95,7 @@ struct FTPConfigurationView: View {
             .padding()
             .background(Color(NSColor.controlBackgroundColor))
             .frame(height: 80)
-            
+
             Divider()
 
             // Demo Mode Banner
@@ -124,231 +126,103 @@ struct FTPConfigurationView: View {
                 )
             }
 
-            // Main Content
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Add padding above the form content
-                    Spacer().frame(height: 30)
-                    
-                    HStack(alignment: .top, spacing: 0) {
-                        // Left Column
-                        VStack(alignment: .leading, spacing: 24) {
-                            // Configuration Section
-                            VStack(alignment: .leading, spacing: 16) {
-                                SectionHeader(title: "Configuration")
-                                CustomTextField(title: "Configuration Name", text: $name, placeholder: "My FTP Server")
-                            }
-                            .disabled(isDemoConfig)
-                            
-                            // FTP Server Section
-                            VStack(alignment: .leading, spacing: 16) {
-                                SectionHeader(title: "FTP Server")
-                                CustomTextField(title: "Server Address", text: $serverAddress, placeholder: "ftp.example.com")
-                                CustomTextField(title: "Username", text: $username, placeholder: "username")
-                                CustomSecureField(title: "Password", text: $password, placeholder: "password")
-                                CustomTextField(title: "Port", text: Binding(
-                                    get: { String(port) },
-                                    set: { port = Int($0) ?? 21 }
-                                ), placeholder: "21")
+            // Step Indicator
+            HStack(spacing: 0) {
+                ForEach(1...3, id: \.self) { step in
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(currentStep >= step ? Color.accentColor : Color.secondary.opacity(0.3))
+                                .frame(width: 28, height: 28)
 
-                                Button(action: {
-                                    print("Test button clicked!")
-                                    testConnection()
-                                }) {
-                                    HStack {
-                                        Image(systemName: "globe")
-                                        Text("Test Connection")
-                                    }
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(serverAddress.isEmpty || username.isEmpty || password.isEmpty || port <= 0 || isDemoConfig)
-
-                                // Show connection result
-                                if let result = connectionResult {
-                                    Text(result)
-                                        .font(.caption)
-                                        .foregroundColor(result.contains("✅") ? .green : result.contains("❌") ? .red : .orange)
-                                        .padding(.top, 4)
-                                }
-                            }
-                            .disabled(isDemoConfig)
-                            
-                            // Sync Settings Section
-                            VStack(alignment: .leading, spacing: 16) {
-                                SectionHeader(title: "Sync Settings")
-                                HStack(spacing: 20) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("Sync:")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                        Picker("", selection: $syncInterval) {
-                                            ForEach(Array(FTPConfig.syncIntervalOptions.enumerated()), id: \.offset) { index, interval in
-                                                Text(FTPConfig.syncIntervalLabels[index]).tag(interval)
-                                            }
-                                        }
-                                        .frame(width: 80)
-                                    }
-
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("Stabilize:")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                        Picker("", selection: $stabilizationInterval) {
-                                            ForEach(Array(FTPConfig.stabilizationIntervalOptions.enumerated()), id: \.offset) { index, interval in
-                                                Text(FTPConfig.stabilizationIntervalLabels[index]).tag(interval)
-                                            }
-                                        }
-                                        .frame(width: 80)
-                                    }
-
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("Aggressiveness:")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                        Picker("", selection: $uploadAggressiveness) {
-                                            ForEach(FTPConfig.UploadAggressiveness.allCases, id: \.self) { aggressiveness in
-                                                Text("\(aggressiveness.shortName) (\(aggressiveness.connectionCount))").tag(aggressiveness)
-                                            }
-                                        }
-                                        .frame(width: 140)
-                                    }
-                                }
-
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Toggle("Auto-tune aggressiveness", isOn: $autoTuneAggressiveness)
-                                        .toggleStyle(.switch)
-                                        .onChange(of: autoTuneAggressiveness) {
-                                            print("🔍 Auto-tune aggressiveness changed to: \(autoTuneAggressiveness)")
-                                        }
-
-                                    Text("Automatically adjust connection count based on server performance")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .disabled(isDemoConfig)
-                        }
-                        .frame(width: 350)
-                        .padding(.horizontal, 30)
-                        
-                        // Right Column
-                        VStack(alignment: .leading, spacing: 24) {
-                            // Local Source Section
-                            VStack(alignment: .leading, spacing: 16) {
-                                SectionHeader(title: "Local Source")
-                                HStack {
-                                    CustomTextField(title: "Source Path", text: $localSourcePath, placeholder: "/Users/username/Documents/ToUpload")
-                                    Button("Browse") {
-                                        print("Browse button clicked! Opening native file picker")
-                                        openDirectoryPicker()
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .disabled(isDemoConfig)
-                                }
-                                Text("📁 Files in this directory will be uploaded to the FTP server")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .disabled(isDemoConfig)
-
-                            // Remote Destination Section
-                            VStack(alignment: .leading, spacing: 16) {
-                                SectionHeader(title: "Remote Destination")
-                                HStack {
-                                    CustomTextField(title: "FTP Path", text: $remoteDestination, placeholder: "/uploads")
-                                    Button("Browse FTP") {
-                                        showingFTPServerBrowser = true
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .disabled(serverAddress.isEmpty || username.isEmpty || password.isEmpty || port <= 0 || isDemoConfig)
-                                }
-                                Text("📤 Files will be uploaded to this directory on the FTP server")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .disabled(isDemoConfig)
-                            
-                            // File Handling Section
-                            VStack(alignment: .leading, spacing: 16) {
-                                SectionHeader(title: "File Handling")
-
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Toggle("Respect file paths (maintain directory structure)", isOn: $respectFilePaths)
-                                        .toggleStyle(.switch)
-                                        .onChange(of: respectFilePaths) {
-                                            print("🔍 File paths respect changed to: \(respectFilePaths)")
-                                        }
-
-                                    if respectFilePaths {
-                                        Text("📁 Uploads will maintain the same directory structure on the FTP server")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    } else {
-                                        Text("📁 All files will be uploaded to the root remote directory")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-
-                                Divider()
-                                    .padding(.vertical, 4)
-
-                                HStack(alignment: .center, spacing: 12) {
-                                    Toggle("Run on Launch", isOn: $runOnLaunch)
-                                        .toggleStyle(.switch)
-                                        .onChange(of: runOnLaunch) {
-                                            print("🔍 Run on Launch changed to: \(runOnLaunch)")
-                                        }
-
-                                    Text("Automatically start syncing this configuration when the app launches")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text("After successful upload:")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-
-                                    Text("📦 Files will be moved to FTPU-Sent directory")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                            .disabled(isDemoConfig)
-                            
-                            // Save Button at bottom of right column
-                            VStack(spacing: 16) {
-                                Divider()
-
-                                HStack(spacing: 16) {
-                                    Button("Cancel") {
-                                        dismiss()
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .keyboardShortcut(.escape)
-
-                                    Spacer()
-
-                                    Button(isNewConfiguration ? "Create Configuration" : "Save Changes") {
-                                        saveConfiguration()
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .disabled(!isValidConfiguration || isDemoConfig)
-                                    .keyboardShortcut(.return)
-                                }
+                            if currentStep > step {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                            } else {
+                                Text("\(step)")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(currentStep >= step ? .white : .secondary)
                             }
                         }
-                        .padding(.trailing, 30)
+
+                        Text(stepTitle(for: step))
+                            .font(.subheadline)
+                            .fontWeight(currentStep == step ? .semibold : .regular)
+                            .foregroundColor(currentStep >= step ? .primary : .secondary)
                     }
-                    .frame(width: 800)
-                    .padding(.bottom, 30)
+
+                    if step < 3 {
+                        Rectangle()
+                            .fill(currentStep > step ? Color.accentColor : Color.secondary.opacity(0.3))
+                            .frame(height: 2)
+                            .padding(.horizontal, 8)
+                    }
                 }
             }
+            .padding(.horizontal, 40)
+            .padding(.vertical, 20)
+
+            // Main Content - Wizard Cards
+            VStack(spacing: 0) {
+                // Step Content
+                Group {
+                    switch currentStep {
+                    case 1:
+                        connectionStepView
+                    case 2:
+                        pathsStepView
+                    case 3:
+                        settingsStepView
+                    default:
+                        connectionStepView
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                Divider()
+
+                // Navigation Buttons
+                HStack(spacing: 16) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .buttonStyle(.bordered)
+                    .keyboardShortcut(.escape)
+
+                    Spacer()
+
+                    if currentStep > 1 {
+                        Button("Back") {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                currentStep -= 1
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    if currentStep < 3 {
+                        Button("Next") {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                currentStep += 1
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canProceedToNextStep)
+                    } else {
+                        Button(isNewConfiguration ? "Create Configuration" : "Save Changes") {
+                            saveConfiguration()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!isValidConfiguration || isDemoConfig)
+                        .keyboardShortcut(.return)
+                    }
+                }
+                .padding()
+            }
         }
-        .frame(minWidth: 800, minHeight: 700)
-        .frame(maxWidth: 900, maxHeight: 800)
+        .frame(minWidth: 600, minHeight: 500)
+        .frame(maxWidth: 700, maxHeight: 600)
         .onAppear {
             print("🔍 FTPConfigurationView appeared")
             print("   isNewConfiguration: \(isNewConfiguration)")
@@ -428,6 +302,237 @@ struct FTPConfigurationView: View {
         } message: {
             Text("Configuration imported successfully! Please set the local source directory using the Browse button before saving.")
         }
+    }
+}
+
+// MARK: - Wizard Step Views
+extension FTPConfigurationView {
+    private func stepTitle(for step: Int) -> String {
+        switch step {
+        case 1: return "Connection"
+        case 2: return "Paths"
+        case 3: return "Settings"
+        default: return ""
+        }
+    }
+
+    private var canProceedToNextStep: Bool {
+        switch currentStep {
+        case 1:
+            // Can proceed from step 1 if basic connection info is filled
+            return !name.isEmpty && !serverAddress.isEmpty && !username.isEmpty && !password.isEmpty && port > 0
+        case 2:
+            // Can proceed from step 2 if local path is set (for editing) or allow proceeding for new configs
+            return isNewConfiguration || !localSourcePath.isEmpty
+        default:
+            return true
+        }
+    }
+
+    private var connectionStepView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Configuration Name
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "Configuration")
+                    CustomTextField(title: "Configuration Name", text: $name, placeholder: "My FTP Server")
+                }
+
+                Divider()
+
+                // FTP Server
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "FTP Server")
+                    CustomTextField(title: "Server Address", text: $serverAddress, placeholder: "ftp.example.com")
+
+                    HStack(spacing: 16) {
+                        CustomTextField(title: "Username", text: $username, placeholder: "username")
+                        CustomSecureField(title: "Password", text: $password, placeholder: "password")
+                    }
+
+                    CustomTextField(title: "Port", text: Binding(
+                        get: { String(port) },
+                        set: { port = Int($0) ?? 21 }
+                    ), placeholder: "21")
+                    .frame(width: 100)
+
+                    HStack(spacing: 12) {
+                        Button(action: {
+                            testConnection()
+                        }) {
+                            HStack {
+                                if isTestingConnection {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                } else {
+                                    Image(systemName: "globe")
+                                }
+                                Text(isTestingConnection ? "Testing..." : "Test Connection")
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(serverAddress.isEmpty || username.isEmpty || password.isEmpty || port <= 0 || isDemoConfig || isTestingConnection)
+
+                        if let result = connectionResult {
+                            Text(result)
+                                .font(.body)
+                                .foregroundColor(result.contains("✅") ? .green : result.contains("❌") ? .red : .orange)
+                        }
+                    }
+                }
+            }
+            .padding(24)
+        }
+        .disabled(isDemoConfig)
+    }
+
+    private var pathsStepView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Local Source
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "Local Source")
+                    HStack {
+                        CustomTextField(title: "Source Path", text: $localSourcePath, placeholder: "/Users/username/Documents/ToUpload")
+                        Button("Browse") {
+                            openDirectoryPicker()
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(isDemoConfig)
+                    }
+                    Text("Files in this directory will be uploaded to the FTP server")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+
+                Divider()
+
+                // Remote Destination
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "Remote Destination")
+                    HStack {
+                        CustomTextField(title: "FTP Path", text: $remoteDestination, placeholder: "/uploads")
+                        Button("Browse FTP") {
+                            showingFTPServerBrowser = true
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(serverAddress.isEmpty || username.isEmpty || password.isEmpty || port <= 0 || isDemoConfig)
+                    }
+                    Text("Files will be uploaded to this directory on the FTP server")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+
+                Divider()
+
+                // Directory Structure
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionHeader(title: "Directory Structure")
+
+                    Toggle("Maintain directory structure", isOn: $respectFilePaths)
+                        .toggleStyle(.switch)
+                        .font(.body)
+
+                    Text(respectFilePaths
+                        ? "Uploads will maintain the same directory structure on the FTP server"
+                        : "All files will be uploaded to the root remote directory")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(24)
+        }
+        .disabled(isDemoConfig)
+    }
+
+    private var settingsStepView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Performance Settings
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "Performance")
+
+                    HStack(spacing: 20) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Sync Interval:")
+                                .font(.body)
+                                .fontWeight(.medium)
+                            Picker("", selection: $syncInterval) {
+                                ForEach(Array(FTPConfig.syncIntervalOptions.enumerated()), id: \.offset) { index, interval in
+                                    Text(FTPConfig.syncIntervalLabels[index]).tag(interval)
+                                }
+                            }
+                            .frame(width: 90)
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Stabilization:")
+                                .font(.body)
+                                .fontWeight(.medium)
+                            Picker("", selection: $stabilizationInterval) {
+                                ForEach(Array(FTPConfig.stabilizationIntervalOptions.enumerated()), id: \.offset) { index, interval in
+                                    Text(FTPConfig.stabilizationIntervalLabels[index]).tag(interval)
+                                }
+                            }
+                            .frame(width: 90)
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Connections:")
+                                .font(.body)
+                                .fontWeight(.medium)
+                            Picker("", selection: $uploadAggressiveness) {
+                                ForEach(FTPConfig.UploadAggressiveness.allCases, id: \.self) { aggressiveness in
+                                    Text("\(aggressiveness.shortName) (\(aggressiveness.connectionCount))").tag(aggressiveness)
+                                }
+                            }
+                            .frame(width: 140)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle("Auto-tune connections", isOn: $autoTuneAggressiveness)
+                            .toggleStyle(.switch)
+                            .font(.body)
+
+                        Text("Automatically adjust connection count based on server performance")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Divider()
+
+                // Startup Settings
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionHeader(title: "Startup")
+
+                    Toggle("Run on app launch", isOn: $runOnLaunch)
+                        .toggleStyle(.switch)
+                        .font(.body)
+
+                    Text("Automatically start syncing this configuration when the app launches")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+
+                Divider()
+
+                // Post-Upload Behavior
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionHeader(title: "After Upload")
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "archivebox")
+                            .foregroundColor(.blue)
+                        Text("Files will be moved to FTP Sender - Sent directory")
+                            .font(.body)
+                    }
+                }
+            }
+            .padding(24)
+        }
+        .disabled(isDemoConfig)
     }
 }
 
@@ -738,10 +843,10 @@ extension FTPConfigurationView {
 // MARK: - Helper Views
 struct SectionHeader: View {
     let title: String
-    
+
     var body: some View {
         Text(title)
-            .font(.headline)
+            .font(.title2)
             .fontWeight(.semibold)
             .foregroundColor(.primary)
     }
@@ -751,16 +856,17 @@ struct CustomTextField: View {
     let title: String
     @Binding var text: String
     let placeholder: String
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.subheadline)
+                .font(.headline)
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
-            
+
             TextField(placeholder, text: $text)
                 .textFieldStyle(.roundedBorder)
+                .font(.title3)
         }
     }
 }
@@ -769,16 +875,17 @@ struct CustomSecureField: View {
     let title: String
     @Binding var text: String
     let placeholder: String
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.subheadline)
+                .font(.headline)
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
-            
+
             SecureField(placeholder, text: $text)
                 .textFieldStyle(.roundedBorder)
+                .font(.title3)
         }
     }
 }

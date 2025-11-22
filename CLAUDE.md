@@ -45,7 +45,7 @@ This is a hybrid Swift/Rust macOS application for automated FTP file uploading w
 2. Swift app writes config to JSON and spawns Rust process
 3. Rust engine performs FTP operations, writes status updates to JSON
 4. Swift app monitors JSON files and updates UI in real-time
-5. File processing: discovery → stabilization monitoring → parallel upload → move to FTPU-Sent
+5. File processing: discovery → stabilization monitoring → parallel upload → move to FTP Sender - Sent
 
 ### Key Features
 - **File Stabilization**: Monitors local file sizes until stable before uploading
@@ -53,7 +53,7 @@ This is a hybrid Swift/Rust macOS application for automated FTP file uploading w
 - **Smart Retry Logic**: Exponential backoff for failed operations
 - **Real-time Monitoring**: Live status updates and progress tracking
 - **Secure Credential Storage**: macOS Keychain integration
-- **Move on Success**: Successfully uploaded files are moved to FTPU-Sent directory
+- **Move on Success**: Successfully uploaded files are moved to FTP Sender - Sent directory
 
 ### Build Process
 The build system creates a complete `.app` bundle containing:

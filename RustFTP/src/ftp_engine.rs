@@ -3,6 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::{Instant, Duration};
 use std::sync::{Arc, Mutex, atomic::{AtomicBool, AtomicUsize, Ordering}};
+use std::net::{TcpStream, ToSocketAddrs};
 use rayon::prelude::*;
 use crossbeam::channel;
 use log::{info, warn, error, debug};
@@ -10,6 +11,40 @@ use chrono::Utc;
 use colored::*;
 use xxhash_rust::xxh3::xxh3_64;
 use crate::db;
+
+/// Connection timeout for FTP operations (30 seconds)
+const FTP_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+/// Read/write timeout for FTP operations (60 seconds)
+const FTP_IO_TIMEOUT: Duration = Duration::from_secs(60);
+
+/// Creates an FTP connection with proper timeouts to prevent hanging
+fn connect_ftp_with_timeout(server: &str, port: u16) -> Result<ftp::FtpStream, Box<dyn std::error::Error>> {
+    let addr = format!("{}:{}", server, port);
+
+    // Resolve the address
+    let socket_addr = addr.to_socket_addrs()?
+        .next()
+        .ok_or_else(|| format!("Could not resolve address: {}", addr))?;
+
+    // Connect with timeout using raw TcpStream first
+    let tcp_stream = TcpStream::connect_timeout(&socket_addr, FTP_CONNECT_TIMEOUT)?;
+
+    // Set read/write timeouts to prevent hanging on I/O operations
+    tcp_stream.set_read_timeout(Some(FTP_IO_TIMEOUT))?;
+    tcp_stream.set_write_timeout(Some(FTP_IO_TIMEOUT))?;
+
+    // Close our test connection - we verified the server is reachable within timeout
+    drop(tcp_stream);
+
+    // Connect via FTP crate (this uses a new TcpStream internally)
+    let ftp_stream = ftp::FtpStream::connect(&addr)?;
+
+    // Set timeouts on the FTP stream's underlying TcpStream
+    ftp_stream.get_ref().set_read_timeout(Some(FTP_IO_TIMEOUT))?;
+    ftp_stream.get_ref().set_write_timeout(Some(FTP_IO_TIMEOUT))?;
+
+    Ok(ftp_stream)
+}
 
 #[derive(Debug, Deserialize, Clone)]
 struct FTPConfig {
@@ -825,9 +860,8 @@ fn cleanup_all_monitor_files(
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("🧹 CLEANUP ALL: Starting cleanup for {} directories", config.remote_destination.len());
 
-    // Create new FTP connection for cleanup
-    let server_addr = format!("{}:{}", config.server_address, config.port);
-    let mut ftp = match ftp::FtpStream::connect(&server_addr) {
+    // Create new FTP connection for cleanup (with timeout)
+    let mut ftp = match connect_ftp_with_timeout(&config.server_address, config.port) {
         Ok(stream) => stream,
         Err(e) => {
             println!("❌ CLEANUP ALL: Failed to connect to FTP server: {}", e);
@@ -1465,12 +1499,36 @@ fn process_single_iteration(
     iteration: usize,
     session_state: &Arc<Mutex<SessionState>>
 ) -> Result<(), Box<dyn std::error::Error>> {
-    
-    // Connect to FTP for directory scanning
-    config_log(&config, &format!("{} Connecting to FTP server...", "🔌".blue()));
-    send_status(status_file, &config, "Connecting", "", 0.1, None)?;
-    
-    let mut ftp = match ftp::FtpStream::connect((config.server_address.clone(), config.port)) {
+
+    // OPTIMIZATION: Scan local directory FIRST before connecting to FTP
+    // This avoids unnecessary FTP connections when there are no files to upload
+    config_log(&config, &format!("{} Scanning local directory for files to upload...", "🔍".blue()));
+    send_status(status_file, &config, "Scanning", "", 0.1, None)?;
+
+    let local_files = scan_local_directory_for_files(&config, status_file, shutdown_file, shutdown_flag, iteration)?;
+
+    // If no files found, skip FTP connection entirely
+    if local_files.is_empty() {
+        config_log(&config, &format!("{} No files found to process, skipping FTP connection", "⚠️".yellow()));
+
+        // Send structured notification
+        send_notification(&config, "info", "No new files found", None, None)?;
+
+        // Write result for this iteration
+        write_result(result_file, &config, true, "No files found, completed scan", 0)?;
+
+        // Send completion status
+        send_status(status_file, &config, "Complete", "No files found, will retry after interval", 1.0, None)?;
+
+        config_log(&config, &format!("{} SCAN INTERVAL COMPLETE! (no FTP connection needed)", "✅".green()));
+        return Ok(());
+    }
+
+    // Files found - now connect to FTP
+    config_log(&config, &format!("{} Found {} files - connecting to FTP server...", "📂".green(), local_files.len()));
+    send_status(status_file, &config, "Connecting", "", 0.2, None)?;
+
+    let mut ftp = match connect_ftp_with_timeout(&config.server_address, config.port) {
         Ok(stream) => {
             config_log(&config, &format!("{} Connected to {}:{}", "✅".green(), config.server_address, config.port));
             stream
@@ -1478,18 +1536,18 @@ fn process_single_iteration(
         Err(e) => {
             let error_msg = format!("Connection failed: {}", e);
             error!("{}", error_msg);
-            
+
             // Analyze error and determine retry strategy
             let (is_server_rejection, retry_delay) = connection_manager.record_failure(&error_msg, config.sync_interval);
             let failure_count = connection_manager.get_failure_count();
-            
+
             if is_server_rejection {
                 config_log(&config, &format!("{} SERVER REJECTION detected (attempt {}): {}", "🚫".red(), failure_count, error_msg));
                 config_log(&config, &format!("{} Server may have connection limits - using exponential backoff", "⚠️".yellow()));
             } else {
                 config_log(&config, &format!("{} Connection failed (attempt {}): {}", "❌".red(), failure_count, error_msg));
             }
-            
+
             config_log(&config, &format!("{} Waiting {:.1} seconds before retry...", "⏳".yellow(), retry_delay.as_secs_f64()));
             send_status(status_file, &config, "Error", &format!("Connection failed (attempt {}), retrying in {:.0}s", failure_count, retry_delay.as_secs_f64()), 0.0, None)?;
             write_result(result_file, &config, false, &error_msg, 0)?;
@@ -1507,18 +1565,18 @@ fn process_single_iteration(
     if let Err(e) = ftp.login(&config.username, &config.password) {
         let error_msg = format!("Login failed: {}", e);
         error!("{}", error_msg);
-        
+
         // Analyze error and determine retry strategy
         let (is_server_rejection, retry_delay) = connection_manager.record_failure(&error_msg, config.sync_interval);
         let failure_count = connection_manager.get_failure_count();
-        
+
         if is_server_rejection {
             config_log(&config, &format!("{} LOGIN REJECTION detected (attempt {}): {}", "🚫".red(), failure_count, error_msg));
             config_log(&config, &format!("{} Server may be rejecting logins - using exponential backoff", "⚠️".yellow()));
         } else {
             config_log(&config, &format!("{} Login failed (attempt {}): {}", "❌".red(), failure_count, error_msg));
         }
-        
+
         config_log(&config, &format!("{} Waiting {:.1} seconds before retry...", "⏳".yellow(), retry_delay.as_secs_f64()));
         send_status(status_file, &config, "Error", &format!("Login failed (attempt {}), retrying in {:.0}s", failure_count, retry_delay.as_secs_f64()), 0.0, None)?;
 
@@ -1526,7 +1584,7 @@ fn process_single_iteration(
         send_notification(&config, "error", &error_msg, None, None)?;
 
         write_result(result_file, &config, false, &error_msg, 0)?;
-        
+
         std::thread::sleep(retry_delay);
         return Ok(()); // Return Ok to continue to next iteration
     }
@@ -1534,16 +1592,13 @@ fn process_single_iteration(
     // Record successful connection
     connection_manager.record_success();
     let failure_count = connection_manager.get_failure_count();
-    
+
     config_log(&config, &format!("{} Logged in as {} (connection restored after {} failures)",
         "🔑".green(), config.username.green(), failure_count));
-    send_status(status_file, &config, "Connected", "", 0.2, None)?;
+    send_status(status_file, &config, "Connected", "", 0.3, None)?;
 
     // Send structured notification
     send_notification(&config, "info", &format!("Connected to {}", config.server_address), None, None)?;
-
-    // Scan local directory for files to upload
-    let local_files = scan_local_directory_for_files(&config, status_file, shutdown_file, shutdown_flag, iteration)?;
 
     config_log(&config, &format!("🔍 DEBUG: Local scan found {} files to upload", local_files.len()));
     // Only show first 10 files to avoid log flooding
@@ -1562,28 +1617,9 @@ fn process_single_iteration(
         .map(|(rel_path, full_path, _)| (rel_path.clone(), full_path.to_string_lossy().to_string()))
         .collect();
 
-    config_log(&config, &format!("🔍 DEBUG: Files will be moved to FTPU-Sent after successful upload"));
-    
-    if all_files.is_empty() {
-        config_log(&config, &format!("{} No files found to process, will wait for interval and retry", "⚠️".yellow()));
+    config_log(&config, &format!("🔍 DEBUG: Files will be moved to FTP Sender - Sent after successful upload"));
 
-        // Send structured notification
-        send_notification(&config, "info", "No new files found", None, None)?;
-
-        // Close the main FTP connection since we're not using it
-        ftp.quit().ok();
-
-        // Write result for this iteration
-        write_result(result_file, &config, true, "No files found, completed scan", 0)?;
-
-        // Send completion status
-        send_status(status_file, &config, "Complete", "No files found, will retry after interval", 1.0, None)?;
-
-        config_log(&config, &format!("{} SCAN INTERVAL COMPLETE!", "✅".green()));
-        return Ok(());
-    }
-    
-    // Process files if any were found
+    // Process files (we already know there are files to upload)
     config_log(&config, &format!("========================================"));
     config_log(&config, &format!("{} STARTING UPLOAD PHASE - {} files to process", "🚀🚀🚀".green(), all_files.len()));
     config_log(&config, &format!("========================================"));
@@ -1676,11 +1712,11 @@ fn scan_local_directory_for_files(
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_default();
 
-                // Skip hidden files and FTPU-Sent directory
-                if filename.starts_with('.') || filename == "FTPU-Sent" {
+                // Skip hidden files and FTP Sender - Sent directory
+                if filename.starts_with('.') || filename == "FTP Sender - Sent" {
                     skipped_count += 1;
-                    if filename == "FTPU-Sent" {
-                        config_log(&config, &format!("   ⏭️ Skipping FTPU-Sent directory"));
+                    if filename == "FTP Sender - Sent" {
+                        config_log(&config, &format!("   ⏭️ Skipping FTP Sender - Sent directory"));
                     }
                     continue;
                 }
@@ -2254,8 +2290,8 @@ fn process_files(
             config_log(&config, &format!("🔗 DEBUG: [Thread-{}] Attempting FTP connection for {} (attempt {})", 
                 thread_id, filename.cyan(), connection_attempt));
             
-            // Create new FTP connection for this thread
-            let mut ftp = match ftp::FtpStream::connect((config.server_address.clone(), config.port)) {
+            // Create new FTP connection for this thread (with timeout)
+            let mut ftp = match connect_ftp_with_timeout(&config.server_address, config.port) {
             Ok(stream) => {
                 debug!("[Thread-{}] FTP connection established", thread_id);
                 config_log(&config, &format!("✅ DEBUG: [Thread-{}] FTP connection successful for {}", thread_id, filename.green()));
@@ -2264,7 +2300,7 @@ fn process_files(
             Err(e) => {
                 let error_msg = format!("Failed to connect: {}", e);
                 error!("[Thread-{}] {}", thread_id, error_msg);
-                
+
                 // Record connection failure in connection manager
                 let (is_server_rejection, retry_delay) = connection_manager_local.record_failure(&error_msg, config.sync_interval);
                 let failure_count = connection_manager_local.get_failure_count();
@@ -2535,11 +2571,11 @@ fn process_files(
                     }
                 }
                 
-                // Move local file to FTPU-Sent directory after successful upload
+                // Move local file to FTP Sender - Sent directory after successful upload
                 let local_path = PathBuf::from(remote_dir); // remote_dir actually contains local file path
                 match move_to_sent_directory(&local_path, &config.local_source_path) {
                     Ok(sent_path) => {
-                        config_log(&config, &format!("{} [Thread-{}] {} moved to FTPU-Sent",
+                        config_log(&config, &format!("{} [Thread-{}] {} moved to FTP Sender - Sent",
                             "📦".green(),
                             thread_id.to_string().cyan(),
                             filename.green()
@@ -2550,7 +2586,7 @@ fn process_files(
                         let _ = send_notification(&config, "success", &format!("✅ Uploaded: {}", filename), Some(filename), None);
                     }
                     Err(e) => {
-                        config_log(&config, &format!("{} [Thread-{}] Failed to move {} to FTPU-Sent: {}",
+                        config_log(&config, &format!("{} [Thread-{}] Failed to move {} to FTP Sender - Sent: {}",
                             "⚠️".yellow(),
                             thread_id.to_string().yellow(),
                             filename.yellow(),
@@ -2558,7 +2594,7 @@ fn process_files(
                         ));
 
                         // Send warning notification - file uploaded but couldn't be moved
-                        let _ = send_notification(&config, "warning", &format!("⚠️ Uploaded {} but failed to move to FTPU-Sent", filename), Some(filename), None);
+                        let _ = send_notification(&config, "warning", &format!("⚠️ Uploaded {} but failed to move to FTP Sender - Sent", filename), Some(filename), None);
                     }
                 }
                 
@@ -2840,22 +2876,22 @@ fn write_result(result_file: &str, config: &FTPConfig, success: bool, message: &
     Ok(())
 }
 
-// Move file to FTPU-Sent directory after successful upload
+// Move file to FTP Sender - Sent directory after successful upload
 fn move_to_sent_directory(local_path: &PathBuf, base_dir: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let base_path = PathBuf::from(base_dir);
-    let sent_dir = base_path.join("FTPU-Sent");
+    let sent_dir = base_path.join("FTP Sender - Sent");
 
-    // Create FTPU-Sent directory if it doesn't exist
+    // Create FTP Sender - Sent directory if it doesn't exist
     if !sent_dir.exists() {
         fs::create_dir_all(&sent_dir)?;
     }
 
-    // Preserve directory structure within FTPU-Sent
+    // Preserve directory structure within FTP Sender - Sent
     let relative_path = local_path.strip_prefix(&base_path)
         .unwrap_or(local_path.as_path());
     let dest_path = sent_dir.join(relative_path);
 
-    // Create parent directories in FTPU-Sent if needed
+    // Create parent directories in FTP Sender - Sent if needed
     if let Some(parent) = dest_path.parent() {
         fs::create_dir_all(parent)?;
     }

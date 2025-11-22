@@ -414,7 +414,7 @@ class LogCollectionService: ObservableObject {
                 configInfo += "   📁 Local Path:    \(config.localSourcePath)\n"
                 configInfo += "   📤 Remote Dest:   \(config.remoteDestination)\n"
                 configInfo += "   ⚡ Performance:   \(config.uploadAggressiveness.displayName)\n"
-                configInfo += "   🗂️ Mode:          Move to FTPU-Sent\n"
+                configInfo += "   🗂️ Mode:          Move to FTP Sender - Sent\n"
                 configInfo += "   ⏱️ Sync Interval: \(config.syncInterval)s\n"
                 configInfo += "   🔄 Stabilization: \(config.stabilizationInterval)s\n"
                 configInfo += "\n"

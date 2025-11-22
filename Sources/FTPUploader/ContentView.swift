@@ -620,7 +620,7 @@ struct ConfigurationDetailView: View {
                             Image(systemName: "archivebox")
                                 .foregroundColor(.blue)
 
-                            Text("Move to FTPU-Sent")
+                            Text("Move to FTP Sender - Sent")
                                 .font(.system(.body, design: .monospaced))
                                 .foregroundColor(.secondary)
                         }
